@@ -21,29 +21,29 @@ button{font-family:inherit;cursor:pointer}
 #error{position:fixed;inset:auto 0 0 0;z-index:70;display:none;background:#7f1d1d;color:#fff;padding:10px 14px;font-size:13px}
 /* ---------- MENU ---------- */
 #menu{position:fixed;inset:0;z-index:20;display:flex;pointer-events:none}
-#menuPanel{pointer-events:auto;width:min(760px,94vw);max-height:100vh;overflow-y:auto;margin:14px;background:var(--teal2);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
-#menuPanel h1{font-size:30px;color:var(--gold);letter-spacing:.1em;line-height:1.05}
+#menuPanel{pointer-events:auto;width:min(760px,94vw);max-height:calc(100vh - 16px);overflow-y:auto;margin:8px;background:var(--teal2);border:1px solid var(--line);border-radius:16px;padding:10px 14px}
+#menuPanel h1{font-size:24px;color:var(--gold);letter-spacing:.1em;line-height:1.05}
 #menuPanel h1 span{color:#fff}
-#menuSub{color:var(--mint);font-size:12px;letter-spacing:.18em;margin:6px 0 12px}
-.cols{display:flex;gap:14px;flex-wrap:wrap}
+#menuSub{color:var(--mint);font-size:11px;letter-spacing:.18em;margin:3px 0 7px}
+.cols{display:flex;gap:10px;flex-wrap:wrap}
 .col{flex:1;min-width:210px}
-.col h2{font-size:13px;color:var(--gold);margin:8px 0 6px}
-.row{display:flex;justify-content:space-between;gap:8px;padding:7px 9px;border:1px solid rgba(45,212,168,.35);border-radius:8px;margin-bottom:5px;cursor:pointer;background:rgba(255,255,255,.03)}
+.col h2{font-size:12px;color:var(--gold);margin:5px 0 4px}
+.row{display:flex;justify-content:space-between;gap:8px;padding:4px 8px;font-size:12.5px;border:1px solid rgba(45,212,168,.35);border-radius:8px;margin-bottom:3px;cursor:pointer;background:rgba(255,255,255,.03)}
 .row:hover{border-color:var(--gold)}
 .row.sel{border-color:var(--gold);background:rgba(255,215,106,.14);box-shadow:0 0 0 1px var(--gold)}
 .row.locked{opacity:.45;cursor:not-allowed}
 .row .xp{color:var(--gold);white-space:nowrap}
 .row.flag{border-color:var(--gold);background:linear-gradient(90deg,rgba(255,215,106,.22),rgba(255,215,106,.05))}
-.jetcard{border:1px solid rgba(45,212,168,.4);border-radius:10px;padding:9px;margin-bottom:7px;cursor:pointer;background:rgba(255,255,255,.03)}
+.jetcard{border:1px solid rgba(45,212,168,.4);border-radius:10px;padding:6px 8px;margin-bottom:5px;cursor:pointer;background:rgba(255,255,255,.03);font-size:13px}
 .jetcard.sel{border-color:var(--gold);background:rgba(255,215,106,.13)}
 .jetcard b{color:#fff;letter-spacing:.06em}
-.stats{font-size:11px;color:var(--mint);margin-top:4px}
-.pills{display:flex;flex-wrap:wrap;gap:6px}
-.pill{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:11px;background:rgba(0,0,0,.25);color:var(--ink);cursor:pointer}
+.stats{font-size:10px;color:var(--mint);margin-top:2px}
+.pills{display:flex;flex-wrap:wrap;gap:4px}
+.pill{border:1px solid var(--line);border-radius:999px;padding:3px 7px;font-size:10px;background:rgba(0,0,0,.25);color:var(--ink);cursor:pointer}
 .pill.on{background:var(--green);color:#04150a;border-color:var(--green);font-weight:700}
 .pill .pr{color:var(--gold)}
-#debrief{border:1px solid var(--gold);border-radius:10px;padding:9px 11px;margin-top:10px;font-size:12px;line-height:1.5}
-#launch{width:100%;margin-top:12px;padding:14px;font-size:19px;font-weight:800;letter-spacing:.1em;color:#04150a;background:var(--green);border:0;border-radius:12px;box-shadow:0 6px 0 #15803d,0 8px 22px rgba(0,0,0,.4)}
+#debrief{border:1px solid var(--gold);border-radius:10px;padding:6px 9px;margin-top:6px;font-size:11px;line-height:1.35}
+#launch{width:100%;margin-top:8px;padding:9px;font-size:17px;font-weight:800;letter-spacing:.1em;color:#04150a;background:var(--green);border:0;border-radius:12px;box-shadow:0 4px 0 #15803d,0 8px 22px rgba(0,0,0,.4)}
 #launch:hover{filter:brightness(1.12)}
 #launch:active{transform:translateY(3px);box-shadow:0 3px 0 #15803d}
 #menuHint{position:fixed;right:16px;bottom:12px;z-index:21;color:var(--mint);font-size:11px;letter-spacing:.1em;text-align:right;text-shadow:0 1px 4px #000}
@@ -135,7 +135,7 @@ button{font-family:inherit;cursor:pointer}
       <div class="col"><h2>Jets</h2><div id="jetList"></div><h2>12 Refits</h2><div class="pills" id="refitList"></div><div id="debrief"></div></div>
     </div>
     <button id="launch">▶ LAUNCH SORTIE</button>
-    <div class="small mint" style="margin-top:8px">ENTER launch · C cockpit · V camera · G gear · F flaps · SHIFT afterburner · SPACE airbrake · 1/2/3 radio · R retry · M mute · P pause</div>
+    <div class="small mint" style="margin-top:4px;font-size:10px">ENTER launch · C cockpit · V camera · G gear · F flaps · SHIFT afterburner · SPACE airbrake · 1/2/3 radio · R retry · M mute · P pause</div>
   </div>
 </div>
 <div id="menuHint">LIVE 3D · SUNSET CANYON<br>DRAG TO ORBIT · SCROLL TO ZOOM</div>

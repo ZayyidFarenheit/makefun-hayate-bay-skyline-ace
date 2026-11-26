@@ -728,7 +728,7 @@ function setupShot(shot) {
   setTimeout(() => {
     if (shot === 'menu') { /* menu is default */ }
     else if (shot === 'storm') { selectSortie(6); launch(true); S.pos.set(-20, 90, -100); S.speed = 240; }
-    else if (shot === 'carrier') { selectSortie(4); launch(true); S.pos.set(180, 70, 850); S.yaw = 0; S.speed = 160; S.gear = true; syncGear(); setCockpit(true); }
+    else if (shot === 'carrier') { selectSortie(4); launch(true); S.pos.set(100, 50, 880); S.yaw = -0.6; S.speed = 160; S.gear = true; syncGear(); setCockpit(true); }
     else { selectSortie(5); launch(true); S.pos.set(10, 85, -40); S.speed = 250; S.fever = 82; }
     window.__kazebay.ready = true;
   }, 800);
