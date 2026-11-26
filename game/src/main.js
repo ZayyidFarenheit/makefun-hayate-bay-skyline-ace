@@ -33,14 +33,16 @@ const S = {
   enemy: null, enemyHp: 100, escort: null, escortTimer: 0, crateDropped: null, crateDone: false,
   cds: { radar: 0, chill: 0, flare: 0 }, shake: 0, fovKick: 0, slowmo: 0,
   dialogueQueue: [], dlgTimer: 0, bannerTimer: 0, lightningTimer: 5, rainOn: false,
-  fpsEMA: 60, quality: 2, frames: 0, fpsTime: 0, menuAngle: 0, orbitDrag: 0,
+  fpsEMA: 60, quality: 2, frames: 0, fpsTime: 0, menuAngle: 0.38, orbitDrag: 0,
   startPos: new T.Vector3(), checkpoint: null, landingSink: 0, lastVertSpeed: 0,
+  chaseDist: 12, shotChase: false, lookAhead: 30,
+  debris: [], smokeArr: [], crashT: 0, wreckVy: 0, wreckSpin: 0, fireball: null, foam: null, flashT: 0,
 };
 const keys = {};
 let mouseDown = false, mouseDX = 0, mouseDY = 0;
 
 const audio = new AudioEngine();
-let renderer, scene, camera, world, jetMesh, menuJet, trail, particlePoints, particleGeo, rainPoints, rainGeo;
+let renderer, scene, camera, world, jetMesh, menuJet, menuLight, trail, particlePoints, particleGeo, rainPoints, rainGeo, smokePoints, smokeGeo;
 let routePoints = [];
 const tmpV = new T.Vector3(), tmpV2 = new T.Vector3();
 
@@ -56,9 +58,11 @@ function init() {
   camera.position.set(0, 140, 700);
   world = new World(scene);
   setLoad(45, 'Painting the sunset…');
-  buildParticles(); buildRain(); buildTrail();
-  menuJet = world.buildJet(S.jetId); menuJet.position.set(0, 70, 320); menuJet.scale.set(2.2,2.2,2.2); scene.add(menuJet);
-  jetMesh = world.buildJet(S.jetId); jetMesh.visible = false; scene.add(jetMesh);
+  buildParticles(); buildRain(); buildTrail(); buildSmoke();
+  menuJet = world.buildJet(S.jetId); menuJet.position.set(20, 70, 320); menuJet.scale.set(2.6,2.6,2.6); scene.add(menuJet);
+  // warm fill light from the camera side so the menu jet's flank reads (sun is behind it)
+  menuLight = new T.PointLight(0xffd9a0, 1.8, 260); menuLight.position.set(70, 120, 430); scene.add(menuLight);
+  jetMesh = world.buildJet(S.jetId); jetMesh.visible = false; jetMesh.scale.set(1.25, 1.25, 1.25); scene.add(jetMesh);
   buildMenu(); applyWeather('golden'); updateClock();
   setLoad(80, 'Warming engines…');
   addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
@@ -73,7 +77,13 @@ function init() {
 function buildParticles() {
   particleGeo = new T.BufferGeometry();
   particleGeo.setAttribute('position', new T.BufferAttribute(new Float32Array(500 * 3), 3));
-  particlePoints = new T.Points(particleGeo, new T.PointsMaterial({ color: 0xffd76a, size: 2.2, transparent: true, opacity: 0.95 }));
+  // round soft sparkles (a bare PointsMaterial renders hard squares)
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.5, 'rgba(255,220,140,.8)'); gr.addColorStop(1, 'rgba(255,200,100,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  particlePoints = new T.Points(particleGeo, new T.PointsMaterial({ color: 0xffd76a, size: 1.4, map: new T.CanvasTexture(c), transparent: true, opacity: 0.95, depthWrite: false }));
   particlePoints.frustumCulled = false; scene.add(particlePoints);
 }
 function buildRain() {
@@ -83,6 +93,17 @@ function buildRain() {
   rainGeo.setAttribute('position', new T.BufferAttribute(arr, 3));
   rainPoints = new T.Points(rainGeo, new T.PointsMaterial({ color: 0xaaccee, size: 1.4, transparent: true, opacity: 0.6 }));
   rainPoints.visible = false; rainPoints.frustumCulled = false; scene.add(rainPoints);
+}
+function buildSmoke() {
+  smokeGeo = new T.BufferGeometry();
+  smokeGeo.setAttribute('position', new T.BufferAttribute(new Float32Array(240 * 3), 3));
+  smokePoints = new T.Points(smokeGeo, new T.PointsMaterial({ color: 0xbbbbbb, size: 5, transparent: true, opacity: 0.55 }));
+  smokePoints.frustumCulled = false; scene.add(smokePoints);
+  for (let i = 0; i < 240; i++) smokeGeo.attributes.position.array[i * 3 + 1] = -9999;
+}
+function spawnSmoke(pos, n, up) {
+  for (let i = 0; i < (n || 20); i++) S.smokeArr.push({ x: pos.x + (Math.random() - 0.5) * 6, y: pos.y + (Math.random() - 0.5) * 3, z: pos.z + (Math.random() - 0.5) * 6, vx: (Math.random() - 0.5) * 14, vy: (up || 14) * (0.5 + Math.random()), vz: (Math.random() - 0.5) * 14, life: 2.2 + Math.random() * 1.2 });
+  if (S.smokeArr.length > 240) S.smokeArr.splice(0, S.smokeArr.length - 240);
 }
 function buildTrail() {
   const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(new Float32Array(60 * 3), 3));
@@ -146,8 +167,8 @@ function toggleRefit(r, btn) {
 }
 function selectJet(id) {
   S.jetId = id; save.jet = id; persist();
-  scene.remove(menuJet); menuJet = world.buildJet(id); menuJet.position.set(0, 70, 320); menuJet.scale.set(2.2,2.2,2.2); scene.add(menuJet);
-  scene.remove(jetMesh); jetMesh = world.buildJet(id); jetMesh.visible = false; scene.add(jetMesh);
+  scene.remove(menuJet); menuJet = world.buildJet(id); menuJet.position.set(20, 70, 320); menuJet.scale.set(2.6,2.6,2.6); scene.add(menuJet);
+  scene.remove(jetMesh); jetMesh = world.buildJet(id); jetMesh.visible = false; jetMesh.scale.set(1.25, 1.25, 1.25); scene.add(jetMesh);
   $('jetName').textContent = JETS[id].short;
 }
 function selectSortie(n) { S.sortieNum = n; save.sortie = n; persist(); buildMenu(); }
@@ -158,9 +179,9 @@ function say(name, text) { S.dialogueQueue.push({ name, text }); }
 function applyWeather(w) {
   S.weather = w;
   const fog = scene.fog;
-  if (w === 'storm') { fog.color.set(0x5a4a6a); world.sunLight.intensity = 0.5; S.rainOn = true; S.gust = 34; }
-  else if (w === 'night') { fog.color.set(0x1a2440); world.sunLight.intensity = 0.35; S.rainOn = false; S.gust = 18; }
-  else { fog.color.set(0xe8906a); world.sunLight.intensity = 1.25; S.rainOn = false; S.gust = w === 'golden' ? 26 : 20; }
+  if (w === 'storm') { fog.color.set(0x5a4a6a); world.sunLight.intensity = 0.5; S.rainOn = true; S.gust = 34; world.setSkyStorm(true); }
+  else if (w === 'night') { fog.color.set(0x1a2440); world.sunLight.intensity = 0.35; S.rainOn = false; S.gust = 18; world.setSkyStorm(false); }
+  else { fog.color.set(0xe8906a); world.sunLight.intensity = 1.25; S.rainOn = false; S.gust = w === 'golden' ? 26 : 20; world.setSkyStorm(false); }
   rainPoints.visible = S.rainOn && S.quality > 0;
   $('gustPill').textContent = 'GUST ' + S.gust + ' KT';
 }
@@ -234,7 +255,10 @@ function currentSortie() { return allSorties().find(s => String(s.n) === String(
 function launch(force) {
   const s = currentSortie();
   if (!force && !isUnlocked(s)) { toast('Sortie locked — clear the previous one first'); return; }
+  clearCrashFx();
+  if (menuLight) menuLight.visible = false;
   S.sortie = s; S.mode = 'flying'; S.crashed = false; S.stageIdx = 0; S.stageDone = 0;
+  S.shotChase = false; S.chaseDist = 12; S.lookAhead = 30; S.slowmo = 0;
   S.score = 0; S.scoreShown = 0; S.scoreTarget = 0; S.fever = 10; S.heat = 0; S.fuel = 100;
   S.hull = 100 + (hasRefit('titan') ? 25 : 0);
   S.throttle = 0.65; S.gear = false; S.flaps = false; S.hook = false; S.crateDone = false; S.crateDropped = null;
@@ -320,7 +344,13 @@ function addScore(base, label) {
   audio.chime();
 }
 function showBanner(text) {
-  const b = $('banner'); b.textContent = text; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+  // JS-driven (not a CSS animation): headless Chromium never advances CSS animations, so a CSS pop stayed at opacity 0 in every screenshot
+  const b = $('banner'); b.textContent = text;
+  b.style.transition = 'transform .15s ease, opacity .4s ease';
+  b.style.opacity = '1'; b.style.transform = 'translate(-50%,-50%) scale(1.05)';
+  clearTimeout(S.bannerT);
+  setTimeout(() => { b.style.transform = 'translate(-50%,-50%) scale(1)'; }, 150);
+  S.bannerT = setTimeout(() => { b.style.opacity = '0'; }, 1600);
 }
 function warn(text, ms) {
   const w = $('warn'); w.textContent = text; w.style.display = 'block';
@@ -356,6 +386,10 @@ function step(dt) {
   if (mouseDown) { pitchIn += clamp(mouseDY * 0.004, -1, 1); yawIn += clamp(mouseDX * 0.004, -1, 1); rollIn += clamp(mouseDX * 0.004, -1, 1); mouseDX *= 0.9; mouseDY *= 0.9; }
   if (S.gamepad) { const gp = S.gamepad; pitchIn += gp.axes[1] || 0; yawIn += gp.axes[0] || 0; rollIn += gp.axes[0] || 0; }
   if (AUTOPLAY && S.mode === 'flying' && !S.crashed) { const a = botInput(); pitchIn = a.pitch; yawIn = a.yaw; rollIn = a.roll; }
+  if (SHOT && S.mode === 'flying' && !S.crashed) {
+    if (SHOT === 'carrier') { pitchIn = -0.02; yawIn = 0.05; rollIn = 0.25; } // carrier shot: straight at the deck, gentle bank, rear view
+    else { const a = botInput(); pitchIn = a.pitch; yawIn = a.yaw; rollIn = clamp(a.roll, -0.8, 0.8); } // screenshot staging: bot steers to the rings (real banking, real ring passes + score)
+  }
   S.pitchT = lerp(S.pitchT, pitchIn * 0.55, 1 - Math.exp(-8 * dt));
   S.yawT = lerp(S.yawT, yawIn * jet.turn * turnBoost * 0.55, 1 - Math.exp(-8 * dt));
   S.rollT = lerp(S.rollT, rollIn * 1.1, 1 - Math.exp(-8 * dt));
@@ -526,15 +560,117 @@ function checkCollisions() {
   // hull damage from near miss with pillar edge handled above; low-speed scrape
   if (p.y < 6 && Math.abs(p.x) < 400) { /* skimming sea spray, no crash */ }
 }
+function makeFireballTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(64, 64, 4, 64, 64, 62);
+  gr.addColorStop(0, 'rgba(255,250,220,1)'); gr.addColorStop(0.35, 'rgba(255,160,40,.95)');
+  gr.addColorStop(0.7, 'rgba(255,80,20,.55)'); gr.addColorStop(1, 'rgba(255,60,10,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  return new T.CanvasTexture(c);
+}
+function spawnDebris(type) {
+  // parts separate with inherited velocity, tumble, bounce and settle — the jet never just stops dead
+  const fwd = new T.Vector3(Math.sin(S.yaw), 0, -Math.cos(S.yaw));
+  const baseV = fwd.clone().multiplyScalar(S.speed * 0.35);
+  const wingMat = new T.MeshPhongMaterial({ color: 0x0e5f5a, flatShading: true });
+  const bodyMat = new T.MeshPhongMaterial({ color: 0xf2e8d5, flatShading: true });
+  const darkMat = new T.MeshPhongMaterial({ color: 0x14181f });
+  const parts = [
+    { geo: new T.BoxGeometry(5.4, 0.22, 2.6), mat: wingMat, off: new T.Vector3(-3.6, 0, 1.4) },
+    { geo: new T.BoxGeometry(5.4, 0.22, 2.6), mat: wingMat, off: new T.Vector3(3.6, 0, 1.4) },
+    { geo: new T.CylinderGeometry(0.62, 0.72, 3.4, 8), mat: darkMat, off: new T.Vector3(-1.25, -0.35, 4.6) },
+    { geo: new T.CylinderGeometry(0.62, 0.72, 3.4, 8), mat: darkMat, off: new T.Vector3(1.25, -0.35, 4.6) },
+    { geo: new T.BoxGeometry(0.22, 2.4, 2.2), mat: wingMat, off: new T.Vector3(0, 1.3, 5.4) },
+    { geo: new T.SphereGeometry(1.05, 8, 6), mat: bodyMat, off: new T.Vector3(0, 1.05, -2.2) },
+  ];
+  for (const p of parts) {
+    const m = new T.Mesh(p.geo, p.mat);
+    m.position.copy(S.pos).add(p.off);
+    m.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+    scene.add(m);
+    S.debris.push({ mesh: m, vel: baseV.clone().add(new T.Vector3((Math.random() - 0.5) * 50, 18 + Math.random() * 30, (Math.random() - 0.5) * 50)), ang: new T.Vector3((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6), life: 5, water: type === 'water' });
+  }
+}
 function crash(type, cause) {
   if (S.crashed) return;
-  S.crashed = true; S.crashCause = cause; S.mode = 'crashed'; S.slowmo = 1; S.shake = 1; jetMesh.visible = true; if (S.cockpit) setCockpit(false);
-  world.burst(S.pos, 0xff6600, 50); world.burst(S.pos, 0xffd76a, 30);
+  S.crashed = true; S.crashCause = cause; S.mode = 'crashed'; S.slowmo = 1; S.shake = 1; S.crashT = 0; S.autoRetryT = 0;
+  jetMesh.visible = true; if (S.cockpit) setCockpit(false);
   audio.crashSound();
   S.hull = Math.max(0, S.hull - 45);
   const sink = type === 'water';
+  // 1) screen flash 2) fireball 3) sparks + smoke 4) separating debris 5) wreck tumble/sink
+  const fl = $('flash'); if (fl) { fl.style.transition = 'none'; fl.style.opacity = '0.85'; S.flashT = 0; }
+  const tex = makeFireballTexture();
+  const fb = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  fb.position.copy(S.pos); fb.scale.set(12, 12, 1); scene.add(fb); S.fireball = fb;
+  world.burst(S.pos, 0xff6600, 50); world.burst(S.pos, 0xffd76a, 30);
+  spawnSmoke(S.pos, 34, 16);
+  spawnDebris(type);
+  if (sink) {
+    // splash column + foam ring + floating debris; the wreck sinks
+    spawnSmoke(S.pos, 26, 55);
+    world.burst(S.pos, 0xffffff, 24);
+    const ring = new T.Mesh(new T.RingGeometry(4, 6.5, 32), new T.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, side: T.DoubleSide }));
+    ring.rotation.x = -Math.PI / 2; ring.position.set(S.pos.x, 1.2, S.pos.z); scene.add(ring); S.foam = ring;
+    S.wreckVy = -6;
+  } else {
+    S.wreckVy = -30; // wreck drops and tumbles
+    S.wreckSpin = (Math.random() - 0.5) * 4;
+  }
   showBanner(sink ? '💥 DITCHED IN THE BAY' : '💥 CRASHED');
-  setTimeout(() => showEnd(false, cause), 900);
+  setTimeout(() => { if (S.crashed) { S.slowmo = 0; showEnd(false, cause); } }, 1700);
+}
+function crashStep(dt) {
+  // runs while the wreck is on screen: nothing freezes — particles, smoke, debris, fireball, wreck all keep moving in slow-mo
+  S.crashT += dt;
+  if (S.fireball) {
+    const t = S.crashT / 0.8;
+    S.fireball.scale.set(12 + t * 55, 12 + t * 55, 1);
+    S.fireball.material.opacity = Math.max(0, 1 - t);
+    if (t >= 1) { scene.remove(S.fireball); S.fireball = null; }
+  }
+  if (S.foam) {
+    const t = S.crashT / 1.6, s = 1 + t * 7;
+    S.foam.scale.set(s, s, 1); S.foam.material.opacity = Math.max(0, 0.8 - t * 0.8);
+    if (t >= 1) { scene.remove(S.foam); S.foam = null; }
+  }
+  const fl = $('flash');
+  if (fl && S.flashT < 1) { S.flashT += dt * 1.4; fl.style.transition = 'opacity .5s'; fl.style.opacity = String(Math.max(0, 0.85 - S.flashT * 0.85)); }
+  // wreck: falls, tumbles, bounces once, then settles (water: sinks slowly, tilting)
+  if (S.crashCause && S.crashCause.indexOf('sea') >= 0 || S.wreckVy === -6) {
+    S.pos.y = Math.max(-14, S.pos.y + S.wreckVy * dt);
+    jetMesh.rotation.z += 0.25 * dt; jetMesh.position.copy(S.pos);
+  } else {
+    S.wreckVy = S.pos.y > 3 ? S.wreckVy - 90 * dt : (Math.abs(S.wreckVy) > 8 ? -S.wreckVy * 0.3 : 0);
+    S.pos.y = Math.max(3, S.pos.y + S.wreckVy * dt);
+    jetMesh.rotation.z += S.wreckSpin * dt; S.wreckSpin *= (1 - dt * 0.8);
+    jetMesh.position.copy(S.pos);
+  }
+  for (const d of S.debris) {
+    d.life -= dt;
+    if (d.water) {
+      // float and bob on the surface
+      if (d.mesh.position.y > 1.6) { d.vel.y -= 60 * dt; d.mesh.position.addScaledVector(d.vel, dt); }
+      else { d.mesh.position.y = 1.6 + Math.sin(S.time * 2 + d.mesh.position.x) * 0.4; d.vel.multiplyScalar(1 - dt * 2); }
+    } else {
+      d.vel.y -= 90 * dt; d.mesh.position.addScaledVector(d.vel, dt);
+      if (d.mesh.position.y < 1) { d.mesh.position.y = 1; d.vel.y = Math.abs(d.vel.y) > 10 ? -d.vel.y * 0.35 : 0; d.vel.x *= 0.7; d.vel.z *= 0.7; d.ang.multiplyScalar(0.6); }
+    }
+    d.mesh.rotation.x += d.ang.x * dt; d.mesh.rotation.y += d.ang.y * dt; d.mesh.rotation.z += d.ang.z * dt;
+    if (d.life < 1) { d.mesh.material.transparent = true; d.mesh.material.opacity = Math.max(0, d.life); }
+  }
+  S.debris = S.debris.filter(d => { if (d.life <= 0) { scene.remove(d.mesh); return false; } return true; });
+  updateParticles(dt);
+  if (S.crashT > 0.4) spawnSmoke(S.pos, 1, 10); // smoke column keeps rising while the wreck burns
+}
+function clearCrashFx() {
+  for (const d of S.debris) scene.remove(d.mesh);
+  S.debris = []; S.smokeArr = [];
+  if (S.fireball) { scene.remove(S.fireball); S.fireball = null; }
+  if (S.foam) { scene.remove(S.foam); S.foam = null; }
+  const fl = $('flash'); if (fl) fl.style.opacity = '0';
+  S.slowmo = 0; S.crashT = 0; S.wreckVy = 0; S.wreckSpin = 0;
 }
 function completeMission() {
   S.mode = 'complete';
@@ -556,13 +692,17 @@ function showEnd(win, body) {
   $('endNext').style.display = win ? 'inline-block' : 'none';
 }
 function retry() {
+  clearCrashFx();
   if (S.checkpoint) { S.pos.copy(S.checkpoint.pos); S.yaw = S.checkpoint.yaw; }
   S.crashed = false; S.mode = 'flying'; S.hull = Math.max(60, S.hull); S.speed = 160; S.pos.y = Math.max(S.pos.y, 120);
-  $('endScreen').style.display = 'none'; S.slowmo = 0;
+  jetMesh.rotation.set(0, S.yaw, 0, 'YXZ');
+  $('endScreen').style.display = 'none'; S.slowmo = 0; S.autoRetryT = 0;
   say('Capt. Kenji Sato', 'Back in the air. Fly it clean this time.');
 }
 function backToMenu() {
-  S.mode = 'menu'; S.crashed = false;
+  clearCrashFx();
+  if (menuLight) menuLight.visible = true;
+  S.mode = 'menu'; S.crashed = false; S.slowmo = 0;
   $('hud').style.display = 'none'; $('cockpit').style.display = 'none'; $('endScreen').style.display = 'none';
   $('menu').style.display = 'flex'; $('menuHint').style.display = 'block';
   jetMesh.visible = false; menuJet.visible = true;
@@ -576,9 +716,17 @@ function updateParticles(dt) {
     else { arr[i * 3 + 1] = -9999; }
   }
   particleGeo.attributes.position.needsUpdate = true;
+  const sa = smokeGeo.attributes.position.array;
+  for (let i = 0; i < 240; i++) {
+    const p = S.smokeArr[i];
+    if (p) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.vy += 6 * dt; sa[i * 3] = p.x; sa[i * 3 + 1] = p.y; sa[i * 3 + 2] = p.z; if (p.life <= 0) S.smokeArr[i] = null; }
+    else sa[i * 3 + 1] = -9999;
+  }
+  S.smokeArr = S.smokeArr.filter(Boolean);
+  smokeGeo.attributes.position.needsUpdate = true;
   if (S.rainOn && rainPoints.visible) {
     const ra = rainGeo.attributes.position.array;
-    for (let i = 0; i < 700; i++) { ra[i * 3 + 1] -= 260 * dt; if (ra[i * 3 + 1] < 0) ra[i * 3 + 1] = 280; ra[i * 3] = S.pos.x + ((ra[i * 3] - S.pos.x + 300) % 600) - 300; }
+    for (let i = 0; i < 700; i++) { ra[i * 3 + 1] -= 260 * dt; if (ra[i * 3 + 1] < 0) ra[i * 3 + 1] = 280; ra[i * 3] = S.pos.x + ((ra[i * 3] - S.pos.x + 300) % 600) - 300; ra[i * 3 + 2] = S.pos.z + ((ra[i * 3 + 2] - S.pos.z + 300) % 600) - 300; }
     rainGeo.attributes.position.needsUpdate = true;
   }
 }
@@ -666,32 +814,34 @@ function drawRadar() {
 // ---------- camera + loop ----------
 function updateCamera(dt) {
   if (S.mode === 'menu') {
-    S.menuAngle += dt * 0.12;
-    const r = 95 + S.orbitDrag;
-    camera.position.set(Math.sin(S.menuAngle) * r, 85 + Math.sin(S.time * 0.2) * 6, 320 + Math.cos(S.menuAngle) * r);
-    camera.lookAt(-55, 68, 320);
-    menuJet.rotation.y = Math.PI + Math.sin(S.time * 0.3) * 0.3; menuJet.position.y = 70 + Math.sin(S.time * 0.8) * 4;
+    // fixed hero angle: the jet never drifts into a rear view — 3/4 front, nose down-left, wings spread, big on the right
+    const r = 82 + S.orbitDrag;
+    camera.position.set(Math.sin(S.menuAngle) * r, 88 + Math.sin(S.time * 0.2) * 4, 320 + Math.cos(S.menuAngle) * r);
+    camera.lookAt(-40, 66, 320);
+    menuJet.rotation.set(-0.55, 2.05, 0.45 + Math.sin(S.time * 0.5) * 0.04, 'YXZ'); // nose down-left, tail up-right, diagonal like the reference
+    menuJet.position.y = 70 + Math.sin(S.time * 0.8) * 3;
     return;
   }
   if (S.crashed) {
-    camera.position.lerp(new T.Vector3(S.pos.x + 60, S.pos.y + 40, S.pos.z + 60), 1 - Math.exp(-2 * dt));
+    // crash cam detaches and eases to a wide view of the wreck — never a snap cut
+    camera.position.lerp(new T.Vector3(S.pos.x + 55, S.pos.y + 38, S.pos.z + 55), 1 - Math.exp(-1.6 * dt));
     camera.lookAt(S.pos); return;
   }
   const fwd = new T.Vector3(Math.sin(S.yaw), 0, -Math.cos(S.yaw));
-  if (S.cockpit) {
+  if (S.cockpit && !S.shotChase) {
     camera.position.copy(S.pos).addScaledVector(fwd, -2).add(new T.Vector3(0, 1.6, 0));
     camera.rotation.set(S.pitch, S.yaw, S.roll * 0.4, 'YXZ');
     camera.fov = lerp(camera.fov, 68, 0.1); camera.updateProjectionMatrix(); return;
   }
   const target = S.camMode === 'orbit'
     ? S.pos.clone().add(new T.Vector3(Math.sin(S.time * 0.3) * 90, 35, Math.cos(S.time * 0.3) * 90))
-    : S.pos.clone().addScaledVector(fwd, 26).add(new T.Vector3(-fwd.z * 0, 0, 0)).add(new T.Vector3(0, 9, 0)).addScaledVector(new T.Vector3(-fwd.x, 0, -fwd.z), -0);
-  // chase: behind (+z of forward is back), above, slightly left
-  const chase = S.pos.clone().addScaledVector(fwd, -26).add(new T.Vector3(0, 9, 0));
-  chase.x += -fwd.z * 6; chase.z += fwd.x * 6;
+    : S.pos.clone().addScaledVector(fwd, 26).add(new T.Vector3(0, 9, 0));
+  // chase: close, behind and above, offset so the jet sits left-centre and reads large
+  const chase = S.pos.clone().addScaledVector(fwd, -S.chaseDist).add(new T.Vector3(0, 6.5, 0));
+  chase.x += -fwd.z * 7; chase.z += fwd.x * 7;
   const dest = S.camMode === 'orbit' ? target : chase;
-  camera.position.lerp(dest, 1 - Math.exp(-5 * dt));
-  camera.lookAt(S.pos.x + fwd.x * 40, S.pos.y + Math.sin(-S.pitch) * 20, S.pos.z + fwd.z * 40);
+  camera.position.lerp(dest, 1 - Math.exp(-10 * dt)); // fast follow: a slow camera trails ~30 units behind a fast jet and shrinks it to a dot
+  camera.lookAt(S.pos.x + fwd.x * S.lookAhead, S.pos.y + Math.sin(-S.pitch) * S.lookAhead * 0.5, S.pos.z + fwd.z * S.lookAhead);
   if (S.shake > 0) { camera.position.x += (Math.random() - 0.5) * S.shake * 2; camera.position.y += (Math.random() - 0.5) * S.shake * 2; S.shake = Math.max(0, S.shake - dt * 1.5); }
   const targetFov = 62 + (S.feverMult >= 8 ? 14 : S.feverMult >= 4 ? 8 : 0) + (S.speed > 280 ? 6 : 0);
   camera.fov = lerp(camera.fov, targetFov, 1 - Math.exp(-3 * dt)); camera.updateProjectionMatrix();
@@ -718,6 +868,7 @@ function loop(now) {
     if (!isFinite(S.pos.x) || !isFinite(S.pos.y) || !isFinite(S.pos.z) || !isFinite(S.speed)) { S.pos.set(0, 130, 520); S.speed = 150; S.yaw = 0; S.pitch = 0; }
     S.pos.y = clamp(S.pos.y, 2, 900); S.pos.x = clamp(S.pos.x, -1200, 1200); S.pos.z = clamp(S.pos.z, -1800, 1000);
   }
+  if (S.mode === 'crashed') { crashStep(dt * ts); if (AUTOPLAY) { S.autoRetryT = (S.autoRetryT || 0) + dt; if (S.autoRetryT > 3) { S.autoRetryT = 0; retry(); } } } // autoplay: watch the wreck settle, then get back in the air instead of sitting on the end screen
   hudT += dt; if (hudT > 0.1) { hudT = 0; if (S.mode === 'flying') updateHUD(); }
   updateCamera(dt * ts);
   renderer.render(scene, camera);
@@ -727,9 +878,27 @@ function loop(now) {
 function setupShot(shot) {
   setTimeout(() => {
     if (shot === 'menu') { /* menu is default */ }
-    else if (shot === 'storm') { selectSortie(6); launch(true); S.pos.set(-20, 90, -100); S.speed = 240; }
-    else if (shot === 'carrier') { selectSortie(4); launch(true); S.pos.set(100, 50, 880); S.yaw = -0.6; S.speed = 160; S.gear = true; syncGear(); setCockpit(true); }
-    else { selectSortie(5); launch(true); S.pos.set(10, 85, -40); S.speed = 250; S.fever = 82; }
+    else if (shot === 'storm') {
+      // ref 2: big banking jet, rings 1-2-3 ahead, lightning held in frame, +750 banner
+      selectSortie(6); launch(true); S.pos.set(-20, 110, 420); S.yaw = 0; S.speed = 200; S.fever = 82;
+      setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ +750 FEVER DROP ×8 · STORM BONUS!'); }, 1700);
+      showBanner('★ +750 FEVER DROP ×8 · STORM BONUS!');
+      world.holdLightning = true; world.strikeLightning(S.pos.x + 60, S.pos.z - 220);
+    }
+    else if (shot === 'carrier') {
+      // ref 3: jet LARGE and centred (chase cam, not first-person) with the instrument panel overlaid
+      selectSortie(4); launch(true); S.pos.set(180, 45, 900); S.yaw = 0.15; S.speed = 150;
+      S.gear = true; S.hook = true; syncGear();
+      setCockpit(true); S.shotChase = true; S.chaseDist = 10; S.lookAhead = 10; jetMesh.visible = true;
+      S.dialogueQueue = [{ name: 'Capt. Kenji Sato', text: RADIO.kenji[1] }]; S.dlgTimer = 0;
+    }
+    else {
+      // ref 4: big banking jet, glowing ring ahead bursting, +2,800 banner
+      selectSortie(5); launch(true); S.pos.set(0, 110, 420); S.yaw = 0; S.speed = 200; S.fever = 82;
+      setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ JETSTREAM FEVER! ×8 · +2,800 PTS'); }, 1700);
+      showBanner('★ JETSTREAM FEVER! ×8 · +2,800 PTS');
+      setInterval(() => { if (world.rings.length && S.mode === 'flying' && !S.crashed) world.burst(world.rings[0].position, 0xffffff, 30); }, 600);
+    }
     window.__kazebay.ready = true;
   }, 800);
 }

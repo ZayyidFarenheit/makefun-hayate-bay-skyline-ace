@@ -49,7 +49,7 @@ export class World {
       uniforms: { top: { value: new T.Color(0x2a4d7a) }, mid: { value: new T.Color(0xff9a4d) }, bot: { value: new T.Color(0xffc98a) } },
       vertexShader: 'varying vec3 vP; void main(){ vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
       fragmentShader: 'varying vec3 vP; uniform vec3 top; uniform vec3 mid; uniform vec3 bot; void main(){ float h=normalize(vP).y; vec3 c=h>0.12?mix(mid,top,smoothstep(0.12,0.65,h)):mix(bot,mid,smoothstep(-0.08,0.12,h)); gl_FragColor=vec4(c,1.0); }' });
-    s.add(new T.Mesh(geo, mat));
+    s.add(new T.Mesh(geo, mat)); this.skyMat = mat;
     const sunTex = glowTexture('rgba(255,240,190,1)', 'rgba(255,150,50,.85)');
     const sun = new T.Sprite(new T.SpriteMaterial({ map: sunTex, transparent: true, depthWrite: false, fog: false }));
     sun.scale.set(420, 420, 1); sun.position.set(-900, 180, -2100); s.add(sun);
@@ -161,7 +161,7 @@ export class World {
     const darkMat = new T.MeshPhongMaterial({ color: 0x14181f, shininess: 40 });
     const accentMat = new T.MeshPhongMaterial({ color: spec.accent, shininess: 80, emissive: spec.accent, emissiveIntensity: 0.25 });
     const fus = new T.Mesh(new T.SphereGeometry(1.6, 12, 10), bodyMat); fus.scale.set(1, 1, 4.2); g.add(fus);
-    const nose = new T.Mesh(new T.ConeGeometry(1.15, 3.4, 12), darkMat); nose.rotation.x = Math.PI / 2; nose.position.z = -7.6; g.add(nose);
+    const nose = new T.Mesh(new T.ConeGeometry(1.15, 3.4, 12), darkMat); nose.rotation.x = -Math.PI / 2; nose.position.z = -7.6; g.add(nose); // apex forward (-z): a pointed nose, not a black disc
     const canopy = new T.Mesh(new T.SphereGeometry(1.05, 10, 8), new T.MeshPhongMaterial({ color: 0x1a7a8a, shininess: 140, transparent: true, opacity: 0.9 })); canopy.scale.set(1, 0.75, 1.9); canopy.position.set(0, 1.05, -2.2); g.add(canopy);
     const stripe = new T.Mesh(new T.BoxGeometry(3.3, 0.28, 6.4), new T.MeshBasicMaterial({ color: 0xd43d2a })); stripe.position.set(0, 0.15, 0.5); g.add(stripe);
     const stripe2 = new T.Mesh(new T.BoxGeometry(3.3, 0.28, 6.4), new T.MeshBasicMaterial({ color: 0x2fae5f })); stripe2.position.set(0, -0.35, 0.5); g.add(stripe2);
@@ -170,7 +170,7 @@ export class World {
       const led = new T.Mesh(new T.BoxGeometry(5.4, 0.1, 0.35), accentMat); led.position.set(s * 3.6, -0.12, 0.05); led.rotation.y = s * 0.55; g.add(led);
       const tail = new T.Mesh(new T.BoxGeometry(2.2, 0.18, 1.5), wingMat); tail.position.set(s * 1.5, 0.5, 5.6); tail.rotation.y = s * 0.5; g.add(tail);
       const nac = new T.Mesh(new T.CylinderGeometry(0.62, 0.72, 3.4, 10), darkMat); nac.rotation.x = Math.PI / 2; nac.position.set(s * 1.25, -0.35, 4.6); g.add(nac);
-      const flame = new T.Mesh(new T.ConeGeometry(0.55, 2.6, 8), new T.MeshBasicMaterial({ color: 0x35e0ff, transparent: true, opacity: 0.85 })); flame.rotation.x = -Math.PI / 2; flame.position.set(s * 1.25, -0.35, 7.2); flame.name = 'flame'; g.add(flame);
+      const flame = new T.Mesh(new T.ConeGeometry(0.55, 2.6, 8), new T.MeshBasicMaterial({ color: 0x35e0ff, transparent: true, opacity: 0.85 })); flame.rotation.x = Math.PI / 2; flame.position.set(s * 1.25, -0.35, 7.2); flame.name = 'flame'; g.add(flame); // apex aft (+z): flame tapers backwards
     }
     const fin = new T.Mesh(new T.BoxGeometry(0.22, 2.4, 2.2), wingMat); fin.position.set(0, 1.3, 5.4); fin.rotation.x = -0.35; g.add(fin);
     const gear = new T.Group(); gear.name = 'gear';
@@ -205,13 +205,23 @@ export class World {
     for (let i = 0; i < (n || 24); i++) this.particles.push({ x: pos.x, y: pos.y, z: pos.z, vx: (Math.random() - 0.5) * 40, vy: (Math.random() - 0.5) * 40, vz: (Math.random() - 0.5) * 40, life: 0.9, max: 0.9 });
     if (this.particles.length > 500) this.particles.splice(0, this.particles.length - 500);
   }
-  strikeLightning() {
+  setSkyStorm(on) {
+    if (!this.skyMat) return;
+    this.skyMat.uniforms.top.value.set(on ? 0x3a2a5e : 0x2a4d7a);
+    this.skyMat.uniforms.mid.value.set(on ? 0xb06a9e : 0xff9a4d);
+    this.skyMat.uniforms.bot.value.set(on ? 0xff8a6a : 0xffc98a);
+  }
+  strikeLightning(cx, cz) {
     if (this.lightning) this.scene.remove(this.lightning);
-    const pts = []; let x = (Math.random() - 0.5) * 800, y = 500, z = -Math.random() * 1200;
+    if (this.lightningGlow) { this.scene.remove(this.lightningGlow); this.lightningGlow = null; }
+    const pts = []; let x = (cx !== undefined ? cx : 0) + (Math.random() - 0.5) * 220, y = 500, z = (cz !== undefined ? cz : -600) + (Math.random() - 0.5) * 220;
     for (let i = 0; i < 8; i++) { pts.push(new T.Vector3(x, y, z)); x += (Math.random() - 0.5) * 90; y -= 70; z += (Math.random() - 0.5) * 60; }
     this.lightning = new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0xffffff }));
     this.scene.add(this.lightning);
+    // purple glow around the bolt so it reads as a storm flash, not a 1px hairline
+    this.lightningGlow = new T.Sprite(new T.SpriteMaterial({ map: glowTexture('rgba(220,180,255,.9)', 'rgba(150,80,255,.45)'), transparent: true, depthWrite: false, opacity: 0.85 }));
+    this.lightningGlow.scale.set(260, 420, 1); this.lightningGlow.position.set(x, 260, z); this.scene.add(this.lightningGlow);
     this.flashLight.position.set(x, 200, z); this.flashLight.intensity = 3;
-    setTimeout(() => { if (this.lightning) { this.scene.remove(this.lightning); this.lightning = null; } this.flashLight.intensity = 0; }, 180);
+    setTimeout(() => { if (this.holdLightning) return; if (this.lightning) { this.scene.remove(this.lightning); this.lightning = null; } if (this.lightningGlow) { this.scene.remove(this.lightningGlow); this.lightningGlow = null; } this.flashLight.intensity = 0; }, 180);
   }
 }
