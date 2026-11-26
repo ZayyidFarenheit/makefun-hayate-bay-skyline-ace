@@ -35,7 +35,7 @@ const S = {
   dialogueQueue: [], dlgTimer: 0, bannerTimer: 0, lightningTimer: 5, rainOn: false,
   fpsEMA: 60, quality: 2, frames: 0, fpsTime: 0, menuAngle: 0.38, orbitDrag: 0,
   startPos: new T.Vector3(), checkpoint: null, landingSink: 0, lastVertSpeed: 0,
-  chaseDist: 12, shotChase: false, lookAhead: 30,
+  chaseDist: 16, shotChase: false, lookAhead: 18, chaseH: 6.5,
   debris: [], smokeArr: [], crashT: 0, wreckVy: 0, wreckSpin: 0, fireball: null, foam: null, flashT: 0,
 };
 const keys = {};
@@ -258,7 +258,7 @@ function launch(force) {
   clearCrashFx();
   if (menuLight) menuLight.visible = false;
   S.sortie = s; S.mode = 'flying'; S.crashed = false; S.stageIdx = 0; S.stageDone = 0;
-  S.shotChase = false; S.chaseDist = 12; S.lookAhead = 30; S.slowmo = 0;
+  S.shotChase = false; S.chaseDist = 16; S.lookAhead = 18; S.chaseH = 6.5; S.slowmo = 0;
   S.score = 0; S.scoreShown = 0; S.scoreTarget = 0; S.fever = 10; S.heat = 0; S.fuel = 100;
   S.hull = 100 + (hasRefit('titan') ? 25 : 0);
   S.throttle = 0.65; S.gear = false; S.flaps = false; S.hook = false; S.crateDone = false; S.crateDropped = null;
@@ -837,7 +837,7 @@ function updateCamera(dt) {
     ? S.pos.clone().add(new T.Vector3(Math.sin(S.time * 0.3) * 90, 35, Math.cos(S.time * 0.3) * 90))
     : S.pos.clone().addScaledVector(fwd, 26).add(new T.Vector3(0, 9, 0));
   // chase: close, behind and above, offset so the jet sits left-centre and reads large
-  const chase = S.pos.clone().addScaledVector(fwd, -S.chaseDist).add(new T.Vector3(0, 6.5, 0));
+  const chase = S.pos.clone().addScaledVector(fwd, -S.chaseDist).add(new T.Vector3(0, S.chaseH, 0));
   chase.x += -fwd.z * 7; chase.z += fwd.x * 7;
   const dest = S.camMode === 'orbit' ? target : chase;
   camera.position.lerp(dest, 1 - Math.exp(-10 * dt)); // fast follow: a slow camera trails ~30 units behind a fast jet and shrinks it to a dot
@@ -862,8 +862,8 @@ function loop(now) {
   if (S.mode === 'flying' && !S.crashed) {
     acc += dt * ts;
     const h = 1 / 60; let n = 0;
-    while (acc >= h && n < 5) { step(h); acc -= h; n++; }
-    if (n === 5) acc = 0;
+    while (acc >= h && n < 8) { step(h); acc -= h; n++; }
+    if (n === 8) acc = 0;
     // NaN guard
     if (!isFinite(S.pos.x) || !isFinite(S.pos.y) || !isFinite(S.pos.z) || !isFinite(S.speed)) { S.pos.set(0, 130, 520); S.speed = 150; S.yaw = 0; S.pitch = 0; }
     S.pos.y = clamp(S.pos.y, 2, 900); S.pos.x = clamp(S.pos.x, -1200, 1200); S.pos.z = clamp(S.pos.z, -1800, 1000);
@@ -880,23 +880,25 @@ function setupShot(shot) {
     if (shot === 'menu') { /* menu is default */ }
     else if (shot === 'storm') {
       // ref 2: big banking jet, rings 1-2-3 ahead, lightning held in frame, +750 banner
-      selectSortie(6); launch(true); S.pos.set(-20, 110, 420); S.yaw = 0; S.speed = 200; S.fever = 82;
-      setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ +750 FEVER DROP ×8 · STORM BONUS!'); }, 1700);
-      showBanner('★ +750 FEVER DROP ×8 · STORM BONUS!');
+      selectSortie(6); launch(true); S.pos.set(-20, 110, 420); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
+      addScore(750, 'FEVER DROP ×8 · STORM BONUS!'); // real award: 750 × 8 = +6,000 — banner and SCORE now agree
+      S.scoreShown = S.scoreTarget; // staged shot: show the awarded score at once (real play still counts up)
+      setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ FEVER DROP ×8 · STORM BONUS! · +6,000 PTS'); }, 1700);
       world.holdLightning = true; world.strikeLightning(S.pos.x + 60, S.pos.z - 220);
     }
     else if (shot === 'carrier') {
       // ref 3: jet LARGE and centred (chase cam, not first-person) with the instrument panel overlaid
       selectSortie(4); launch(true); S.pos.set(180, 45, 900); S.yaw = 0.15; S.speed = 150;
       S.gear = true; S.hook = true; syncGear();
-      setCockpit(true); S.shotChase = true; S.chaseDist = 10; S.lookAhead = 10; jetMesh.visible = true;
+      setCockpit(true); S.shotChase = true; S.chaseDist = 15; S.lookAhead = 12; S.chaseH = 3.5; jetMesh.visible = true;
       S.dialogueQueue = [{ name: 'Capt. Kenji Sato', text: RADIO.kenji[1] }]; S.dlgTimer = 0;
     }
     else {
       // ref 4: big banking jet, glowing ring ahead bursting, +2,800 banner
-      selectSortie(5); launch(true); S.pos.set(0, 110, 420); S.yaw = 0; S.speed = 200; S.fever = 82;
+      selectSortie(5); launch(true); S.pos.set(0, 110, 420); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
+      addScore(350, 'JETSTREAM FEVER! ×8'); // real award: 350 × 8 = +2,800 — banner and SCORE now agree
+      S.scoreShown = S.scoreTarget; // staged shot: show the awarded score at once (real play still counts up)
       setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ JETSTREAM FEVER! ×8 · +2,800 PTS'); }, 1700);
-      showBanner('★ JETSTREAM FEVER! ×8 · +2,800 PTS');
       setInterval(() => { if (world.rings.length && S.mode === 'flying' && !S.crashed) world.burst(world.rings[0].position, 0xffffff, 30); }, 600);
     }
     window.__kazebay.ready = true;
