@@ -1093,9 +1093,7 @@ function setupShot(shot) {
       // and SHORT (topY 160) so the whole bolt fits inside the chase camera's frame (its top was above the
       // frame at topY 300). Chase camera pulled in (12 vs 16) so the jet reads bigger on final.
       S.chaseDist = 12;
-      world.strikeLightning(180, 560, true, 160);
-      world.strikeLightning(60, 560, false, 200);
-      world.strikeLightning(330, 560, false, 180);
+      world.strikeLightning(180, 560, true, 160); // ONE hero bolt only — companions read as a second competing bolt and broke the reference's single-bolt look
       S.dialogueQueue = [{ name: 'Capt. Kenji Sato', text: RADIO.kenji[3] }]; S.dlgTimer = 0;
       S.lightningTimer = 30; // pause the live storm timer so no extra bolts pile up during the still
     }

@@ -330,41 +330,72 @@ export class World {
     if (this.canyonCapMat) this.canyonCapMat.color.set(mode === 'storm' ? 0x3a4038 : 0xffffff);
     for (const c of (this.clouds || [])) c.material.color.set(p.cloud);
   }
-  // Branching lightning: a THICK 3D bolt (tube, not a 1px line) with a halo tube,
-  // branch bolts, and a big glow sprite — readable in a still, not a faint hairline.
+  // Branching lightning: a bolt is a thin white-hot tube with branch bolts and a
+  // small faint glow sprite — it must read as a CRISP LINE in a still, not a blob.
   // Bolts live in this.bolts[] so several can be held at once (storm cover); each bolt
   // removes itself after 180ms unless holdLightning is set (menu/storm staging).
-  // hero=true: ONE HUGE WHITE-HOT bolt dominating the frame (core r 10, halo r 22,
-  // white-blue halo + white glow, flash 12) — the huge branching white bolt over the
-  // mountains in the CALDERA storm-landing reference. No more purple tubes: the hero
-  // and its companions are all white-hot now.
-  // topY: bolts for stills start low (topY ~300) so the whole zigzag sits inside the frame
+  // hero=true: ONE huge WHITE bolt dominating the frame (thin core r3, NO halo tube,
+  // tiny 64×90 glow at 0.16 opacity) — the thin sharp branching white bolt over the
+  // mountains in the CALDERA storm-landing reference. The previous hero (core r18 +
+  // halo r26 + 260×340 glow, Catmull-Rom smoothed) read as a white flash blob.
+  // topY: bolts for stills start low (topY ~160) so the whole zigzag sits inside the frame
   // instead of towering above it — the live storm still uses the default 520.
   strikeLightning(cx, cz, hero, topY) {
     const group = new T.Group();
     const baseX = (cx !== undefined ? cx : 0) + (Math.random() - 0.5) * (hero ? 20 : 80);
     const baseZ = (cz !== undefined ? cz : -600) + (Math.random() - 0.5) * (hero ? 20 : 80);
     const top = topY !== undefined ? topY : 520;
-    const pts = []; let x = baseX, y = top, z = baseZ;
-    const segs = hero ? 10 : 8, drop = top / segs, jit = hero ? 18 : 90; // hero bolt walks tight on the approach centreline
-    // (±9/step) so it reads as ONE dominant centre bolt; wide jitter made it snake out of frame
-    for (let i = 0; i < segs; i++) { pts.push(new T.Vector3(x, y, z)); x += (Math.random() - 0.5) * jit; y -= drop; z += (Math.random() - 0.5) * (hero ? 16 : 60); }
-    const curve = new T.CatmullRomCurve3(pts);
     const coreMat = new T.MeshBasicMaterial({ color: 0xffffff });
     const haloMat = new T.MeshBasicMaterial({ color: hero ? 0xeaf2ff : 0xbfd4ff, transparent: true, opacity: hero ? 0.6 : 0.5 });
-    const coreR = hero ? 18 : 2, haloR = hero ? 26 : 5; // hero core thick enough to dominate the frame even where the HUD crosses it
-    group.add(new T.Mesh(new T.TubeGeometry(curve, 24, haloR, 5, false), haloMat)); // pale halo tube
-    group.add(new T.Mesh(new T.TubeGeometry(curve, 24, coreR, 5, false), coreMat)); // white-hot core tube
-    for (const bi of (hero ? [1, 3, 5] : [2, 4])) { // branch bolts off the main bolt (hero gets 3, longer ones)
-      const bp = pts[bi]; const bpts = [bp.clone()]; let bx = bp.x, by = bp.y, bz = bp.z;
-      const dir = Math.random() < 0.5 ? -1 : 1;
-      for (let i = 0; i < 4; i++) { bx += dir * (25 + Math.random() * 35); by -= 45; bz += (Math.random() - 0.5) * 40; bpts.push(new T.Vector3(bx, by, bz)); }
-      const bc = new T.CatmullRomCurve3(bpts);
-      group.add(new T.Mesh(new T.TubeGeometry(bc, 10, hero ? 12 : 2.2, 5, false), haloMat));
-      group.add(new T.Mesh(new T.TubeGeometry(bc, 10, hero ? 5 : 0.9, 5, false), coreMat));
+    // Sharp-cornered tube from a polyline (CurvePath of LineCurve3) — Catmull-Rom
+    // smoothed the zigzag into soft curves, which is what made the bolt a blob.
+    const tubeFromPts = (pts, r, mat, tubSegs) => {
+      const path = new T.CurvePath();
+      for (let i = 0; i < pts.length - 1; i++) path.add(new T.LineCurve3(pts[i], pts[i + 1]));
+      return new T.Mesh(new T.TubeGeometry(path, tubSegs, r, 5, false), mat);
+    };
+    if (hero) {
+      // CRISP HERO BOLT (CALDERA reference: thin bright-white line, hard edges, long
+      // sharp zigzag segments + long forks, almost no glow): 8 segments so several
+      // sharp kinks land in the visible window between the Fever bar and the banner,
+      // sawtooth walk alternating ±(30–48) per step, clamped to ±65 of the centreline
+      // so the bolt stays dead-centre in frame; core r3, NO halo tube, tiny faint glow
+      // (see below). (r18 core + r26 halo + 260×340 glow is what turned the last bolt
+      // into a white blob.)
+      const segs = 8, drop = top / segs;
+      const pts = []; let x = baseX, y = top, z = baseZ, dir = Math.random() < 0.5 ? -1 : 1;
+      for (let i = 0; i < segs; i++) {
+        pts.push(new T.Vector3(x, y, z));
+        x += dir * (30 + Math.random() * 18); dir = -dir;
+        if (x > baseX + 65) x = baseX + 65; if (x < baseX - 65) x = baseX - 65;
+        y -= drop; z += (Math.random() - 0.5) * 10;
+      }
+      pts.push(new T.Vector3(x, 0, z));
+      group.add(tubeFromPts(pts, 3, coreMat, 32)); // thin white-hot core, hard edges
+      for (const bi of [1, 3, 5]) { // 3 SHORT forks close to the main bolt (long branches read as separate streaks crossing the frame)
+        const bp = pts[bi]; const bpts = [bp.clone()]; let bx = bp.x, by = bp.y, bz = bp.z;
+        const bdir = Math.random() < 0.5 ? -1 : 1;
+        for (let i = 0; i < 2; i++) { bx += bdir * (20 + Math.random() * 12); by -= 22 + Math.random() * 8; bz += (Math.random() - 0.5) * 12; bpts.push(new T.Vector3(bx, by, bz)); }
+        group.add(tubeFromPts(bpts, 1.6, coreMat, 12));
+      }
+    } else {
+      const pts = []; let x = baseX, y = top, z = baseZ;
+      const segs = 8, drop = top / segs, jit = 90;
+      for (let i = 0; i < segs; i++) { pts.push(new T.Vector3(x, y, z)); x += (Math.random() - 0.5) * jit; y -= drop; z += (Math.random() - 0.5) * 60; }
+      const curve = new T.CatmullRomCurve3(pts);
+      group.add(new T.Mesh(new T.TubeGeometry(curve, 24, 5, 5, false), haloMat)); // pale halo tube
+      group.add(new T.Mesh(new T.TubeGeometry(curve, 24, 2, 5, false), coreMat)); // white-hot core tube
+      for (const bi of [2, 4]) { // branch bolts off the main bolt
+        const bp = pts[bi]; const bpts = [bp.clone()]; let bx = bp.x, by = bp.y, bz = bp.z;
+        const dir = Math.random() < 0.5 ? -1 : 1;
+        for (let i = 0; i < 4; i++) { bx += dir * (25 + Math.random() * 35); by -= 45; bz += (Math.random() - 0.5) * 40; bpts.push(new T.Vector3(bx, by, bz)); }
+        const bc = new T.CatmullRomCurve3(bpts);
+        group.add(new T.Mesh(new T.TubeGeometry(bc, 10, 2.2, 5, false), haloMat));
+        group.add(new T.Mesh(new T.TubeGeometry(bc, 10, 0.9, 5, false), coreMat));
+      }
     }
-    const glow = new T.Sprite(new T.SpriteMaterial({ map: glowTexture(hero ? 'rgba(255,255,255,1)' : 'rgba(220,230,255,.9)', hero ? 'rgba(190,215,255,.55)' : 'rgba(150,180,255,.45)'), transparent: true, depthWrite: false, opacity: hero ? 0.45 : 0.5 }));
-    glow.scale.set(hero ? 260 : 120, hero ? 340 : 180, 1); glow.position.set(baseX, top / 2, baseZ); group.add(glow); // centred on the bolt axis, not the walk's random end point
+    const glow = new T.Sprite(new T.SpriteMaterial({ map: glowTexture(hero ? 'rgba(255,255,255,1)' : 'rgba(220,230,255,.9)', hero ? 'rgba(190,215,255,.55)' : 'rgba(150,180,255,.45)'), transparent: true, depthWrite: false, opacity: hero ? 0.16 : 0.2 }));
+    glow.scale.set(hero ? 64 : 48, hero ? 90 : 72, 1); glow.position.set(baseX, top / 2, baseZ); group.add(glow); // tight faint halo only — the big 260×340 glow washed the whole bolt into a blob
     this.scene.add(group);
     this.bolts.push(group); this.lightning = group; // latest bolt, for callers that reference it
     this.flashLight.color.set(hero ? 0xffffff : 0xccccff);
