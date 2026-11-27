@@ -26,6 +26,7 @@ const S = {
   jetId: save.jet || 'K-21', sortie: null, sortieNum: save.sortie || 5, stageIdx: 0, stageDone: 0,
   pos: new T.Vector3(0, 120, 500), yaw: 0, pitch: 0, roll: 0, yawT: 0, pitchT: 0, rollT: 0,
   speed: 0, throttle: 0.6, heat: 0, fuel: 100, hull: 100, fever: 0, feverMult: 1,
+  strafeV: 0, vertV: 0, // 6DOF: lateral strafe + vertical thrust velocities (units/s, jet-local frame)
   gear: false, flaps: false, hook: false, glideLock: true,
   score: 0, scoreShown: 0, scoreTarget: 0, combo: 0,
   gust: 26, wind: new T.Vector3(4, 0, 2), weather: 'golden',
@@ -262,6 +263,7 @@ function launch(force) {
   S.score = 0; S.scoreShown = 0; S.scoreTarget = 0; S.fever = 10; S.heat = 0; S.fuel = 100;
   S.hull = 100 + (hasRefit('titan') ? 25 : 0);
   S.throttle = 0.65; S.gear = false; S.flaps = false; S.hook = false; S.crateDone = false; S.crateDropped = null;
+  S.strafeV = 0; S.vertV = 0; // 6DOF velocities reset on launch
   S.pos.set(0, 130, 520); S.yaw = 0; S.pitch = 0; S.roll = 0; S.yawT = 0; S.pitchT = 0; S.rollT = 0; S.speed = 150;
   S.startPos.copy(S.pos); S.checkpoint = { pos: S.pos.clone(), yaw: 0 };
   applyWeather(s.weather || 'golden');
@@ -405,6 +407,23 @@ function step(dt) {
   const targetSpeed = S.throttle * maxSpd * (S.flaps ? 0.75 : 1) * (S.gear ? 0.85 : 1);
   S.speed = lerp(S.speed, targetSpeed, 1 - Math.exp(-0.7 * dt));
   if (keys['Space']) S.speed = lerp(S.speed, S.speed * 0.6, dt * 2); // airbrake
+  // ---- TRUE 6DOF: independent lateral strafe + vertical thrust (no yaw/pitch change) ----
+  // Keys: J strafe left, L strafe right, I thrust up, K thrust down (PgUp/PgDn = up/down too).
+  // None of these collide with existing bindings (Space airbrake, C cockpit, F flaps, X crate, R retry).
+  let strafeIn = 0, vertIn = 0;
+  if (keys['KeyJ']) strafeIn -= 1;
+  if (keys['KeyL']) strafeIn += 1;
+  if (keys['KeyI'] || keys['PageUp']) vertIn += 1;
+  if (keys['KeyK'] || keys['PageDown']) vertIn -= 1;
+  const STRF_ACC = 55, VERT_ACC = 50, STRF_MAX = 45, VERT_MAX = 40; // caps stay well below forward speed (~80-175 u/s), so the jet still flies like a jet, not a drone
+  S.strafeV = clamp(S.strafeV + strafeIn * STRF_ACC * dt, -STRF_MAX, STRF_MAX);
+  S.vertV = clamp(S.vertV + vertIn * VERT_ACC * dt, -VERT_MAX, VERT_MAX);
+  if (!strafeIn) S.strafeV = lerp(S.strafeV, 0, 1 - Math.exp(-2.2 * dt)); // damping when released
+  if (!vertIn) S.vertV = lerp(S.vertV, 0, 1 - Math.exp(-2.2 * dt));
+  const rX = Math.cos(S.yaw), rZ = Math.sin(S.yaw); // jet-local right vector, kept level (strafe is horizontal, vertical is pure world-up)
+  S.pos.x += rX * S.strafeV * dt;
+  S.pos.z += rZ * S.strafeV * dt;
+  S.pos.y += S.vertV * dt;
   // stall: soft, recoverable
   if (S.speed < 70) { S.pitch = lerp(S.pitch, 0.25, dt * 1.5); S.pos.y -= 12 * dt; }
   // heading / pitch integration
@@ -695,6 +714,7 @@ function retry() {
   clearCrashFx();
   if (S.checkpoint) { S.pos.copy(S.checkpoint.pos); S.yaw = S.checkpoint.yaw; }
   S.crashed = false; S.mode = 'flying'; S.hull = Math.max(60, S.hull); S.speed = 160; S.pos.y = Math.max(S.pos.y, 120);
+  S.strafeV = 0; S.vertV = 0; // 6DOF velocities reset on retry
   jetMesh.rotation.set(0, S.yaw, 0, 'YXZ');
   $('endScreen').style.display = 'none'; S.slowmo = 0; S.autoRetryT = 0;
   say('Capt. Kenji Sato', 'Back in the air. Fly it clean this time.');
@@ -761,6 +781,7 @@ function updateHUD() {
   $('speed').textContent = Math.round(S.speed) + ' KT';
   $('altHdg').textContent = Math.round(S.pos.y * 3.28) + ' FT · HDG ' + String(hdg).padStart(3, '0') + '°';
   $('chipFever').textContent = 'FEVER ×' + S.feverMult;
+  const d6 = $('dof6'); if (d6) d6.textContent = `6DOF · STRF ${S.strafeV >= 0 ? '+' : ''}${Math.round(S.strafeV)} · VERT ${S.vertV >= 0 ? '+' : ''}${Math.round(S.vertV)}`;
   $('chipFever').className = 'chip' + (S.feverMult >= 4 ? ' litY' : S.feverMult >= 2 ? ' lit' : '');
   $('cd1').textContent = S.cds.radar > 0 ? '(' + Math.ceil(S.cds.radar) + 's)' : 'READY';
   $('cd2').textContent = S.cds.chill > 0 ? '(' + Math.ceil(S.cds.chill) + 's)' : 'READY';
@@ -914,7 +935,7 @@ window.__kazebay = {
   forceLanding(quality) { if (S.mode !== 'flying') launch(); S.pos.set(180, 16, 620); S.speed = 140; S.gear = true; S.landingSink = quality === 'perfect' ? 86 : quality === 'good' ? 320 : 600; const w = 3; stageProgress(0); showBanner(`★ ${w}-WIRE TRAP (${S.landingSink} FPM)`); addScore(800, `${w}-WIRE TRAP (${S.landingSink} FPM)`); return S.landingSink; },
   setWeather(w) { applyWeather(w); return w; },
   setFever(tier) { S.fever = tier === 8 ? 85 : tier === 4 ? 60 : tier === 2 ? 35 : 10; return S.feverMult; },
-  getStats() { return { mode: S.mode, score: S.scoreTarget, scoreShown: Math.round(S.scoreShown), fever: S.fever, mult: S.feverMult, speed: Math.round(S.speed), alt: Math.round(S.pos.y * 3.28), hull: Math.round(S.hull), fuel: Math.round(S.fuel), heat: Math.round(S.heat), stage: S.stageIdx, stageDone: S.stageDone, sortie: S.sortieNum, jet: S.jetId, fps: Math.round(S.fpsEMA), crashed: S.crashed }; },
+  getStats() { return { mode: S.mode, score: S.scoreTarget, scoreShown: Math.round(S.scoreShown), fever: S.fever, mult: S.feverMult, speed: Math.round(S.speed), alt: Math.round(S.pos.y * 3.28), hull: Math.round(S.hull), fuel: Math.round(S.fuel), heat: Math.round(S.heat), stage: S.stageIdx, stageDone: S.stageDone, sortie: S.sortieNum, jet: S.jetId, fps: Math.round(S.fpsEMA), crashed: S.crashed, yaw: +S.yaw.toFixed(3), pitch: +S.pitch.toFixed(3), x: Math.round(S.pos.x), y: Math.round(S.pos.y), z: Math.round(S.pos.z), strafe: Math.round(S.strafeV), vert: Math.round(S.vertV) }; },
 };
 
 try { init(); } catch (e) { const el = $('error'); el.style.display = 'block'; el.textContent = 'Failed to start WebGL: ' + e.message; }

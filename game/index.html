@@ -131,13 +131,13 @@ button{font-family:inherit;cursor:pointer}
 <div id="menu">
   <div id="menuPanel">
     <h1>HAYATE BAY: <span>SKYLINE ACE</span></h1>
-    <div id="menuSub">MISSION SELECT · 12 SORTIES + 4 BONUS · BOSS: VOID ACE</div>
+    <div id="menuSub">MISSION SELECT · 12 SORTIES + 4 BONUS · BOSS: VOID ACE · <span class="gold">★ TRUE 6DOF FLIGHT MODEL</span></div>
     <div class="cols">
       <div class="col"><h2>Sorties</h2><div id="sortieList"></div><h2>Bonus</h2><div id="bonusList"></div></div>
       <div class="col"><h2>Jets</h2><div id="jetList"></div><h2>12 Refits</h2><div class="pills" id="refitList"></div><div id="debrief"></div></div>
     </div>
     <button id="launch">▶ LAUNCH SORTIE</button>
-    <div class="small mint" style="margin-top:4px;font-size:10px">ENTER launch · C cockpit · V camera · G gear · F flaps · SHIFT afterburner · SPACE airbrake · 1/2/3 radio · R retry · M mute · P pause</div>
+    <div class="small mint" style="margin-top:4px;font-size:10px">ENTER launch · C cockpit · V camera · G gear · F flaps · SHIFT afterburner · SPACE airbrake · 1/2/3 radio · R retry · M mute · P pause<br><span class="gold">★ 6DOF: J / L strafe left / right · I / K vertical thrust up / down (or PgUp / PgDn) — strafe &amp; lift without turning</span></div>
   </div>
 </div>
 <div id="menuHint">LIVE 3D · SUNSET CANYON<br>DRAG TO ORBIT · SCROLL TO ZOOM</div>
@@ -147,7 +147,7 @@ button{font-family:inherit;cursor:pointer}
   <div id="hudTC"><div id="compass">032&nbsp;&nbsp;047&nbsp;&nbsp;062&nbsp;&nbsp;077&nbsp;&nbsp;092&nbsp;&nbsp;107&nbsp;&nbsp;122</div><div id="hdg">HDG 092°</div><div id="feverWrap"><div id="feverLabel">★ JETSTREAM FEVER! ×1</div><div id="feverBar"><div id="feverFill"></div></div><div id="feverTiers"><span>CRUISE ×1</span><span>TAILWIND ×2</span><span>AFTERBURN ×4</span><span>★ FEVER ×8</span></div></div></div>
   <div class="panel" id="hudTR"><div id="clock">17:35 · DAY 10 · $58,400</div><div class="gold small" id="rankLine">★ RANK 5 · BAY ACE · 190 XP</div><span id="gustPill">GUST 26 KT</span><div class="abil">[1] RADAR PULSE (Kenji) <span id="cd1"></span><br>[2] TURBO CHILL (Maya) <span id="cd2"></span><br>[3] FLARE SALVO (Tariq) <span id="cd3"></span></div><div class="contacts" id="contacts"></div></div>
   <div class="panel" id="hudBL"><canvas id="radar" width="300" height="300"></canvas><div class="small mint" style="text-align:center">Hayate Bay · Dragon Span</div><div class="small">FUEL <span id="fuelPct">100%</span></div><div class="bar"><i id="fuelBar" style="width:100%;background:#22c55e"></i></div><div class="small">HULL <span id="hullPct">100%</span></div><div class="bar"><i id="hullBar" style="width:100%;background:#35e0d0"></i></div><div class="small">HEAT <span id="heatPct">0%</span></div><div class="bar"><i id="heatBar" style="width:0%;background:#ff9a3d"></i></div></div>
-  <div class="panel" id="hudBR"><div class="gold small" id="jetName">K-21 SHINKAI</div><div id="speed">245 KT</div><div class="small" id="altHdg">426 FT · HDG 092°</div><div><span class="chip" id="chipGear">GEAR</span><span class="chip" id="chipFlaps">FLAPS</span><span class="chip" id="chipFever">FEVER ×1</span></div><div class="small mint" style="margin-top:6px">♫ Kaze FM 101.5 — “Emerald Jetstream” — Future Synth</div><div id="eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="panel" id="hudBR"><div class="gold small" id="jetName">K-21 SHINKAI</div><div id="speed">245 KT</div><div class="small" id="altHdg">426 FT · HDG 092°</div><div><span class="chip" id="chipGear">GEAR</span><span class="chip" id="chipFlaps">FLAPS</span><span class="chip" id="chipFever">FEVER ×1</span></div><div class="small mint" id="dof6" style="margin-top:6px">6DOF · STRF +0 · VERT +0</div><div class="small mint" style="margin-top:6px">♫ Kaze FM 101.5 — “Emerald Jetstream” — Future Synth</div><div id="eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
   <div id="dialog"><div id="portrait">K</div><div><div id="dlgName">CAPT. KENJI SATO · BAY FLIGHT DIRECTOR</div><div id="dlgText">Canyon Golden Hour… look at that light. Fly it like you mean it.</div></div></div>
   <div id="routePill">ROUTE PLAN · 3 STOPS (1)→(2)→(3) · 1.0s</div>
   <div id="banner"></div><div id="warn"></div>
