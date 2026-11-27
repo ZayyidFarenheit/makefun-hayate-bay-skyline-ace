@@ -1,6 +1,6 @@
 // HAYATE BAY: SKYLINE ACE — main game. Three.js (global THREE), procedural everything.
 import { JETS, REFITS, SORTIES, BONUS, RADIO, CONTACTS, rankFor, RANK_NAMES } from './data.js';
-import { World } from './world.js';
+import { World, glowTexture } from './world.js';
 import { AudioEngine } from './audio.js';
 
 const T = window.THREE;
@@ -43,7 +43,7 @@ const keys = {};
 let mouseDown = false, mouseDX = 0, mouseDY = 0;
 
 const audio = new AudioEngine();
-let renderer, scene, camera, world, jetMesh, menuJet, menuLight, trail, particlePoints, particleGeo, rainPoints, rainGeo, smokePoints, smokeGeo;
+let renderer, scene, camera, world, jetMesh, menuJet, menuLight, menuRim, menuSunGlow, windStreaks, trail, particlePoints, particleGeo, rainPoints, rainGeo, smokePoints, smokeGeo;
 let routePoints = [];
 const tmpV = new T.Vector3(), tmpV2 = new T.Vector3();
 
@@ -60,9 +60,15 @@ function init() {
   world = new World(scene);
   setLoad(45, 'Painting the sunset…');
   buildParticles(); buildRain(); buildTrail(); buildSmoke();
-  menuJet = world.buildJet(S.jetId); menuJet.position.set(20, 70, 320); menuJet.scale.set(2.6,2.6,2.6); scene.add(menuJet);
+  menuJet = world.buildJet(S.jetId); menuJet.position.set(6, 74, 320); menuJet.scale.set(3.1,3.1,3.1); scene.add(menuJet); decorateMenuJet();
   // warm fill light from the camera side so the menu jet's flank reads (sun is behind it)
-  menuLight = new T.PointLight(0xffd9a0, 1.8, 260); menuLight.position.set(70, 120, 430); scene.add(menuLight);
+  menuLight = new T.PointLight(0xffd9a0, 2.2, 260); menuLight.position.set(70, 120, 430); scene.add(menuLight);
+  // hot orange rim light from behind-left so the jet's far edges glow against the sunset
+  menuRim = new T.PointLight(0xff7a30, 1.8, 240); menuRim.position.set(-70, 100, 180); scene.add(menuRim);
+  // big warm sun halo in the menu camera's view (upper right) — fake bloom for the cover
+  menuSunGlow = new T.Sprite(new T.SpriteMaterial({ map: glowTexture('rgba(255,240,190,1)', 'rgba(255,150,50,.8)'), transparent: true, opacity: 0.32, depthWrite: false, blending: T.AdditiveBlending, fog: false }));
+  menuSunGlow.scale.set(420, 420, 1); menuSunGlow.position.set(330, 210, -1050); scene.add(menuSunGlow);
+  buildWindStreaks();
   jetMesh = world.buildJet(S.jetId); jetMesh.visible = false; jetMesh.scale.set(1.25, 1.25, 1.25); scene.add(jetMesh);
   buildMenu(); applyWeather('golden'); updateClock();
   setLoad(80, 'Warming engines…');
@@ -74,6 +80,31 @@ function init() {
   if (SHOT) setupShot(SHOT);
   else if (AUTOPLAY) { setTimeout(() => { selectSortie(5); launch(); }, 600); }
   requestAnimationFrame(loop);
+}
+function decorateMenuJet() {
+  // afterburner: orange flames + a hot glow sprite at the tail, flickered in updateCamera
+  menuJet.traverse(o => { if (o.name === 'flame') { o.scale.set(1.25, 1.7, 1.25); o.material.color.set(0xff8a2a); } });
+  if (menuJet.userData.abGlow) menuJet.remove(menuJet.userData.abGlow);
+  const ab = new T.Sprite(new T.SpriteMaterial({ map: glowTexture('rgba(255,240,180,1)', 'rgba(255,120,20,.7)'), transparent: true, opacity: 0.9, depthWrite: false, blending: T.AdditiveBlending }));
+  ab.scale.set(17, 17, 1); ab.position.set(0, -0.35, 8.8); menuJet.add(ab); menuJet.userData.abGlow = ab;
+}
+function buildWindStreaks() {
+  // fast horizontal speed-lines streaming past the menu jet — the cover should feel windy/busy
+  const c = document.createElement('canvas'); c.width = 128; c.height = 16;
+  const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 128, 0);
+  gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.5, 'rgba(255,230,190,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 6, 128, 4);
+  const tex = new T.CanvasTexture(c);
+  windStreaks = [];
+  for (let i = 0; i < 36; i++) {
+    const s = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, opacity: 0.28 + Math.random() * 0.2, depthWrite: false, blending: T.AdditiveBlending }));
+    s.scale.set(26 + Math.random() * 22, 1.6 + Math.random() * 1.4, 1);
+    s.position.set(-220 + Math.random() * 520, 25 + Math.random() * 195, 350 - Math.random() * 1050);
+    s.userData.vx = -(110 + Math.random() * 90); scene.add(s); windStreaks.push(s);
+  }
+}
+function updateWindStreaks(dt) {
+  for (const s of windStreaks) { s.position.x += s.userData.vx * dt; if (s.position.x < -240) { s.position.x = 300 + Math.random() * 40; s.position.y = 25 + Math.random() * 195; s.position.z = 350 - Math.random() * 1050; } }
 }
 function buildParticles() {
   particleGeo = new T.BufferGeometry();
@@ -168,7 +199,7 @@ function toggleRefit(r, btn) {
 }
 function selectJet(id) {
   S.jetId = id; save.jet = id; persist();
-  scene.remove(menuJet); menuJet = world.buildJet(id); menuJet.position.set(20, 70, 320); menuJet.scale.set(2.6,2.6,2.6); scene.add(menuJet);
+  scene.remove(menuJet); menuJet = world.buildJet(id); menuJet.position.set(6, 74, 320); menuJet.scale.set(3.1,3.1,3.1); scene.add(menuJet); decorateMenuJet();
   scene.remove(jetMesh); jetMesh = world.buildJet(id); jetMesh.visible = false; jetMesh.scale.set(1.25, 1.25, 1.25); scene.add(jetMesh);
   $('jetName').textContent = JETS[id].short;
 }
@@ -258,6 +289,9 @@ function launch(force) {
   if (!force && !isUnlocked(s)) { toast('Sortie locked — clear the previous one first'); return; }
   clearCrashFx();
   if (menuLight) menuLight.visible = false;
+  if (menuRim) menuRim.visible = false;
+  if (menuSunGlow) menuSunGlow.visible = false;
+  if (windStreaks) for (const s of windStreaks) s.visible = false;
   S.sortie = s; S.mode = 'flying'; S.crashed = false; S.stageIdx = 0; S.stageDone = 0;
   S.shotChase = false; S.chaseDist = 16; S.lookAhead = 18; S.chaseH = 6.5; S.slowmo = 0;
   S.score = 0; S.scoreShown = 0; S.scoreTarget = 0; S.fever = 10; S.heat = 0; S.fuel = 100;
@@ -722,6 +756,9 @@ function retry() {
 function backToMenu() {
   clearCrashFx();
   if (menuLight) menuLight.visible = true;
+  if (menuRim) menuRim.visible = true;
+  if (menuSunGlow) menuSunGlow.visible = true;
+  if (windStreaks) for (const s of windStreaks) s.visible = true;
   S.mode = 'menu'; S.crashed = false; S.slowmo = 0;
   $('hud').style.display = 'none'; $('cockpit').style.display = 'none'; $('endScreen').style.display = 'none';
   $('menu').style.display = 'flex'; $('menuHint').style.display = 'block';
@@ -836,11 +873,16 @@ function drawRadar() {
 function updateCamera(dt) {
   if (S.mode === 'menu') {
     // fixed hero angle: the jet never drifts into a rear view — 3/4 front, nose down-left, wings spread, big on the right
-    const r = 82 + S.orbitDrag;
-    camera.position.set(Math.sin(S.menuAngle) * r, 88 + Math.sin(S.time * 0.2) * 4, 320 + Math.cos(S.menuAngle) * r);
-    camera.lookAt(-40, 66, 320);
+    const r = 64 + S.orbitDrag;
+    camera.position.set(Math.sin(S.menuAngle) * r, 76 + Math.sin(S.time * 0.2) * 4, 320 + Math.cos(S.menuAngle) * r);
+    camera.lookAt(-14, 88, 320);
     menuJet.rotation.set(-0.55, 2.05, 0.45 + Math.sin(S.time * 0.5) * 0.04, 'YXZ'); // nose down-left, tail up-right, diagonal like the reference
-    menuJet.position.y = 70 + Math.sin(S.time * 0.8) * 3;
+    menuJet.position.y = 74 + Math.sin(S.time * 0.8) * 3;
+    // afterburner flicker
+    if (menuJet.userData.abGlow) { const f = 1 + Math.sin(S.time * 13) * 0.12 + Math.sin(S.time * 29) * 0.06; menuJet.userData.abGlow.scale.set(17 * f, 17 * f, 1); }
+    // wind streaks streaming past + occasional lightning in the sunset sky
+    if (windStreaks) updateWindStreaks(dt);
+    S.lightningTimer -= dt; if (S.lightningTimer <= 0) { S.lightningTimer = 6 + Math.random() * 5; world.strikeLightning(-120 + Math.random() * 240, -350 - Math.random() * 250); }
     return;
   }
   if (S.crashed) {
@@ -898,7 +940,10 @@ function loop(now) {
 // ---------- shot modes (for screenshots) ----------
 function setupShot(shot) {
   setTimeout(() => {
-    if (shot === 'menu') { /* menu is default */ }
+    if (shot === 'menu') {
+      // cover: hold a lightning bolt in the sunset sky so the still catches it; pause the menu lightning timer meanwhile
+      world.holdLightning = true; world.strikeLightning(-180, -450); world.flashLight.intensity = 0.7; S.lightningTimer = 30;
+    }
     else if (shot === 'storm') {
       // ref 2: big banking jet, rings 1-2-3 ahead, lightning held in frame, +750 banner
       selectSortie(6); launch(true); S.pos.set(-20, 110, 420); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
