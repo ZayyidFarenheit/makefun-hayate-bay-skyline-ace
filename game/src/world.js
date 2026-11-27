@@ -27,6 +27,18 @@ export function glowTexture(inner, outer) {
     g.fillStyle = gr; g.fillRect(0, 0, w, h);
   });
 }
+export function beamTexture() {
+  // god-ray beam: bright along its length, fading at both ends and at the sides
+  return canvasTex(64, 256, (g, w, h) => {
+    const v = g.createLinearGradient(0, 0, 0, h);
+    v.addColorStop(0, 'rgba(255,230,170,0)'); v.addColorStop(0.35, 'rgba(255,230,170,.6)'); v.addColorStop(1, 'rgba(255,230,170,0)');
+    g.fillStyle = v; g.fillRect(0, 0, w, h);
+    g.globalCompositeOperation = 'destination-in';
+    const hz = g.createLinearGradient(0, 0, w, 0);
+    hz.addColorStop(0, 'rgba(0,0,0,0)'); hz.addColorStop(0.5, 'rgba(0,0,0,1)'); hz.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = hz; g.fillRect(0, 0, w, h);
+  });
+}
 export function numberTexture(n) {
   return canvasTex(128, 128, (g, w, h) => {
     g.fillStyle = 'rgba(5,38,34,.9)'; g.beginPath(); g.arc(64, 64, 58, 0, 7); g.fill();
@@ -37,8 +49,8 @@ export function numberTexture(n) {
 export class World {
   constructor(scene) {
     this.scene = scene; this.pillars = []; this.particles = [];
-    this.buildSky(); this.buildSea(); this.buildCanyon(); this.buildBridge(); this.buildCarrier(); this.buildCity(); this.buildClouds(); this.buildBirds();
-    this.flashLight = new T.PointLight(0xccccff, 0, 900); scene.add(this.flashLight); this.lightning = null;
+    this.buildSky(); this.buildSea(); this.buildCanyon(); this.buildBridge(); this.buildCarrier(); this.buildCity(); this.buildClouds(); this.buildBirds(); this.buildGodRays();
+    this.flashLight = new T.PointLight(0xccccff, 0, 900); scene.add(this.flashLight); this.lightning = null; this.bolts = []; this.holdLightning = false;
     this.rings = []; this.crates = []; this.npcs = [];
   }
   buildSky() {
@@ -153,6 +165,18 @@ export class World {
       const basket = new T.Mesh(new T.BoxGeometry(5, 4, 5), new T.MeshLambertMaterial({ color: 0x6b4423 })); basket.position.set(bal.position.x, 178, bal.position.z); this.scene.add(basket);
     }
   }
+  buildGodRays() {
+    // sunbeams cutting through the storm clouds (reference: god-ray shafts from the upper sky)
+    const tex = beamTexture(); this.godRays = new T.Group();
+    for (let k = 0; k < 6; k++) {
+      const m = new T.Mesh(new T.PlaneGeometry(55 + Math.random() * 45, 640 + Math.random() * 260),
+        new T.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.75 + Math.random() * 0.25, blending: T.AdditiveBlending, depthWrite: false, fog: false }));
+      m.position.set(-520 + k * 170 + (Math.random() - 0.5) * 60, 260, -350 - Math.random() * 450);
+      m.rotation.z = 0.22 + Math.random() * 0.12; m.rotation.y = 0.15;
+      this.godRays.add(m);
+    }
+    this.godRays.visible = false; this.scene.add(this.godRays);
+  }
   buildJet(id) {
     const spec = { 'K-21': { body: 0xf2e8d5, wing: 0x0e5f5a, accent: 0xffd76a }, 'S-50': { body: 0xff8c42, wing: 0x2a6f9e, accent: 0xffffff }, 'Z-9': { body: 0x2b2f3a, wing: 0x8a1f2d, accent: 0x35e0d0 } }[id] || { body: 0xf2e8d5, wing: 0x0e5f5a, accent: 0xffd76a };
     const g = new T.Group();
@@ -210,18 +234,44 @@ export class World {
     this.skyMat.uniforms.top.value.set(on ? 0x3a2a5e : 0x2a4d7a);
     this.skyMat.uniforms.mid.value.set(on ? 0xb06a9e : 0xff9a4d);
     this.skyMat.uniforms.bot.value.set(on ? 0xff8a6a : 0xffc98a);
+    if (this.godRays) this.godRays.visible = on;
+    // storm clouds go dark purple, golden-hour clouds stay warm white
+    for (const c of (this.clouds || [])) c.material.color.set(on ? 0x8a6fc0 : 0xffffff);
   }
+  // Branching lightning: a THICK 3D bolt (tube, not a 1px line) with a purple halo tube,
+  // 2 branch bolts, and a big glow sprite — readable in a still, not a faint hairline.
+  // Bolts live in this.bolts[] so several can be held at once (storm cover); each bolt
+  // removes itself after 180ms unless holdLightning is set (menu/storm staging).
   strikeLightning(cx, cz) {
-    if (this.lightning) this.scene.remove(this.lightning);
-    if (this.lightningGlow) { this.scene.remove(this.lightningGlow); this.lightningGlow = null; }
-    const pts = []; let x = (cx !== undefined ? cx : 0) + (Math.random() - 0.5) * 220, y = 500, z = (cz !== undefined ? cz : -600) + (Math.random() - 0.5) * 220;
-    for (let i = 0; i < 8; i++) { pts.push(new T.Vector3(x, y, z)); x += (Math.random() - 0.5) * 90; y -= 70; z += (Math.random() - 0.5) * 60; }
-    this.lightning = new T.Line(new T.BufferGeometry().setFromPoints(pts), new T.LineBasicMaterial({ color: 0xffffff }));
-    this.scene.add(this.lightning);
-    // purple glow around the bolt so it reads as a storm flash, not a 1px hairline
-    this.lightningGlow = new T.Sprite(new T.SpriteMaterial({ map: glowTexture('rgba(220,180,255,.9)', 'rgba(150,80,255,.45)'), transparent: true, depthWrite: false, opacity: 0.85 }));
-    this.lightningGlow.scale.set(260, 420, 1); this.lightningGlow.position.set(x, 260, z); this.scene.add(this.lightningGlow);
-    this.flashLight.position.set(x, 200, z); this.flashLight.intensity = 3;
-    setTimeout(() => { if (this.holdLightning) return; if (this.lightning) { this.scene.remove(this.lightning); this.lightning = null; } if (this.lightningGlow) { this.scene.remove(this.lightningGlow); this.lightningGlow = null; } this.flashLight.intensity = 0; }, 180);
+    const group = new T.Group();
+    const baseX = (cx !== undefined ? cx : 0) + (Math.random() - 0.5) * 80;
+    const baseZ = (cz !== undefined ? cz : -600) + (Math.random() - 0.5) * 80;
+    const pts = []; let x = baseX, y = 520, z = baseZ;
+    for (let i = 0; i < 8; i++) { pts.push(new T.Vector3(x, y, z)); x += (Math.random() - 0.5) * 90; y -= 68; z += (Math.random() - 0.5) * 60; }
+    const curve = new T.CatmullRomCurve3(pts);
+    const coreMat = new T.MeshBasicMaterial({ color: 0xffffff });
+    const haloMat = new T.MeshBasicMaterial({ color: 0xb45cff, transparent: true, opacity: 0.55 });
+    group.add(new T.Mesh(new T.TubeGeometry(curve, 24, 5, 5, false), haloMat)); // purple halo tube
+    group.add(new T.Mesh(new T.TubeGeometry(curve, 24, 2, 5, false), coreMat)); // white-hot core tube
+    for (const bi of [2, 4]) { // 2 branch bolts off the upper/middle of the main bolt
+      const bp = pts[bi]; const bpts = [bp.clone()]; let bx = bp.x, by = bp.y, bz = bp.z;
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      for (let i = 0; i < 4; i++) { bx += dir * (25 + Math.random() * 35); by -= 45; bz += (Math.random() - 0.5) * 40; bpts.push(new T.Vector3(bx, by, bz)); }
+      const bc = new T.CatmullRomCurve3(bpts);
+      group.add(new T.Mesh(new T.TubeGeometry(bc, 10, 2.2, 5, false), haloMat));
+      group.add(new T.Mesh(new T.TubeGeometry(bc, 10, 0.9, 5, false), coreMat));
+    }
+    const glow = new T.Sprite(new T.SpriteMaterial({ map: glowTexture('rgba(220,180,255,.9)', 'rgba(150,80,255,.45)'), transparent: true, depthWrite: false, opacity: 0.9 }));
+    glow.scale.set(360, 540, 1); glow.position.set(x, 260, z); group.add(glow);
+    this.scene.add(group);
+    this.bolts.push(group); this.lightning = group; // latest bolt, for callers that reference it
+    this.flashLight.position.set(baseX, 200, baseZ); this.flashLight.intensity = 3.5;
+    setTimeout(() => {
+      if (this.holdLightning) return;
+      this.scene.remove(group);
+      const i = this.bolts.indexOf(group); if (i >= 0) this.bolts.splice(i, 1);
+      if (!this.bolts.length) this.flashLight.intensity = 0;
+    }, 180);
   }
+  clearBolts() { for (const g of (this.bolts || [])) this.scene.remove(g); this.bolts = []; this.lightning = null; this.flashLight.intensity = 0; }
 }

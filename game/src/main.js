@@ -43,7 +43,7 @@ const keys = {};
 let mouseDown = false, mouseDX = 0, mouseDY = 0;
 
 const audio = new AudioEngine();
-let renderer, scene, camera, world, jetMesh, menuJet, menuLight, menuRim, menuSunGlow, windStreaks, trail, particlePoints, particleGeo, rainPoints, rainGeo, smokePoints, smokeGeo;
+let renderer, scene, camera, world, jetMesh, menuJet, menuLight, menuRim, menuSunGlow, windStreaks, trail, particlePoints, particleGeo, rainPoints, rainGeo, rainStreaks, rainStreakGeo, smokePoints, smokeGeo;
 let routePoints = [];
 const tmpV = new T.Vector3(), tmpV2 = new T.Vector3();
 
@@ -123,8 +123,25 @@ function buildRain() {
   const arr = new Float32Array(700 * 3);
   for (let i = 0; i < 700; i++) { arr[i * 3] = (Math.random() - 0.5) * 600; arr[i * 3 + 1] = Math.random() * 300; arr[i * 3 + 2] = (Math.random() - 0.5) * 600; }
   rainGeo.setAttribute('position', new T.BufferAttribute(arr, 3));
-  rainPoints = new T.Points(rainGeo, new T.PointsMaterial({ color: 0xaaccee, size: 1.4, transparent: true, opacity: 0.6 }));
+  // rain as short vertical streaks (a bare PointsMaterial renders hard squares)
+  const c = document.createElement('canvas'); c.width = 8; c.height = 32;
+  const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 32);
+  gr.addColorStop(0, 'rgba(200,220,255,0)'); gr.addColorStop(0.5, 'rgba(200,220,255,1)'); gr.addColorStop(1, 'rgba(200,220,255,0)');
+  g.fillStyle = gr; g.fillRect(3, 0, 2, 32);
+  rainPoints = new T.Points(rainGeo, new T.PointsMaterial({ color: 0xaaccee, size: 3, map: new T.CanvasTexture(c), transparent: true, opacity: 0.85, depthWrite: false }));
   rainPoints.visible = false; rainPoints.frustumCulled = false; scene.add(rainPoints);
+  // second rain layer: long slanted streaks (line segments read as rain in a still; points alone do not)
+  rainStreakGeo = new T.BufferGeometry();
+  const sa = new Float32Array(500 * 6);
+  for (let i = 0; i < 500; i++) {
+    const x = (Math.random() - 0.5) * 600, y = Math.random() * 300, z = (Math.random() - 0.5) * 600;
+    sa[i * 6] = x; sa[i * 6 + 1] = y; sa[i * 6 + 2] = z;
+    sa[i * 6 + 3] = x - 4; sa[i * 6 + 4] = y - 24; sa[i * 6 + 5] = z;
+  }
+  rainStreakGeo.setAttribute('position', new T.BufferAttribute(sa, 3));
+  rainStreaks = new T.LineSegments(rainStreakGeo, new T.LineBasicMaterial({ color: 0xbcd8ff, transparent: true, opacity: 0.45 }));
+  rainStreaks.visible = false; rainStreaks.frustumCulled = false; scene.add(rainStreaks);
 }
 function buildSmoke() {
   smokeGeo = new T.BufferGeometry();
@@ -215,6 +232,7 @@ function applyWeather(w) {
   else if (w === 'night') { fog.color.set(0x1a2440); world.sunLight.intensity = 0.35; S.rainOn = false; S.gust = 18; world.setSkyStorm(false); }
   else { fog.color.set(0xe8906a); world.sunLight.intensity = 1.25; S.rainOn = false; S.gust = w === 'golden' ? 26 : 20; world.setSkyStorm(false); }
   rainPoints.visible = S.rainOn && S.quality > 0;
+  if (rainStreaks) rainStreaks.visible = S.rainOn && S.quality > 0;
   $('gustPill').textContent = 'GUST ' + S.gust + ' KT';
 }
 function updateClock() {
@@ -288,6 +306,7 @@ function launch(force) {
   const s = currentSortie();
   if (!force && !isUnlocked(s)) { toast('Sortie locked — clear the previous one first'); return; }
   clearCrashFx();
+  if (world) { world.clearBolts(); world.holdLightning = false; } // a held menu/storm bolt must not leak into live flight
   if (menuLight) menuLight.visible = false;
   if (menuRim) menuRim.visible = false;
   if (menuSunGlow) menuSunGlow.visible = false;
@@ -783,8 +802,18 @@ function updateParticles(dt) {
   smokeGeo.attributes.position.needsUpdate = true;
   if (S.rainOn && rainPoints.visible) {
     const ra = rainGeo.attributes.position.array;
-    for (let i = 0; i < 700; i++) { ra[i * 3 + 1] -= 260 * dt; if (ra[i * 3 + 1] < 0) ra[i * 3 + 1] = 280; ra[i * 3] = S.pos.x + ((ra[i * 3] - S.pos.x + 300) % 600) - 300; ra[i * 3 + 2] = S.pos.z + ((ra[i * 3 + 2] - S.pos.z + 300) % 600) - 300; }
+    for (let i = 0; i < 700; i++) { ra[i * 3 + 1] -= 260 * dt; ra[i * 3] -= 40 * dt; if (ra[i * 3 + 1] < 0) ra[i * 3 + 1] = 280; ra[i * 3] = S.pos.x + ((ra[i * 3] - S.pos.x + 300) % 600) - 300; ra[i * 3 + 2] = S.pos.z + ((ra[i * 3 + 2] - S.pos.z + 300) % 600) - 300; }
     rainGeo.attributes.position.needsUpdate = true;
+    if (rainStreaks && rainStreaks.visible) { // streak layer falls with the same wrap
+      const rs = rainStreakGeo.attributes.position.array;
+      for (let i = 0; i < 500; i++) {
+        rs[i * 6 + 1] -= 260 * dt; rs[i * 6 + 4] -= 260 * dt; rs[i * 6] -= 40 * dt; rs[i * 6 + 3] -= 40 * dt;
+        if (rs[i * 6 + 1] < 0) { rs[i * 6 + 1] = 280; rs[i * 6 + 4] = 256; }
+        rs[i * 6] = S.pos.x + ((rs[i * 6] - S.pos.x + 300) % 600) - 300; rs[i * 6 + 3] = rs[i * 6] - 4;
+        rs[i * 6 + 2] = S.pos.z + ((rs[i * 6 + 2] - S.pos.z + 300) % 600) - 300; rs[i * 6 + 5] = rs[i * 6 + 2];
+      }
+      rainStreakGeo.attributes.position.needsUpdate = true;
+    }
   }
 }
 function botInput() {
@@ -916,7 +945,7 @@ function loop(now) {
   // fps / adaptive quality
   S.frames++; S.fpsTime += dt;
   if (S.fpsTime > 1) { S.fpsEMA = S.frames / S.fpsTime; S.frames = 0; S.fpsTime = 0;
-    if (S.fpsEMA < 45 && S.quality > 0) { S.quality--; renderer.setPixelRatio(S.quality === 0 ? 1 : 1.25); rainPoints.visible = false; }
+    if (S.fpsEMA < 45 && S.quality > 0) { S.quality--; renderer.setPixelRatio(S.quality === 0 ? 1 : 1.25); rainPoints.visible = false; if (rainStreaks) rainStreaks.visible = false; }
     else if (S.fpsEMA > 58 && S.quality < 2 && !SAFE) { S.quality++; renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); }
   }
   if (S.paused) { renderer.render(scene, camera); return; }
@@ -950,7 +979,12 @@ function setupShot(shot) {
       addScore(750, 'FEVER DROP ×8 · STORM BONUS!'); // real award: 750 × 8 = +6,000 — banner and SCORE now agree
       S.scoreShown = S.scoreTarget; // staged shot: show the awarded score at once (real play still counts up)
       setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ FEVER DROP ×8 · STORM BONUS! · +6,000 PTS'); }, 1700);
-      world.holdLightning = true; world.strikeLightning(S.pos.x + 60, S.pos.z - 220);
+      world.holdLightning = true;
+      // storm cover: THREE branching bolts held in frame (left, centre, right) like the reference
+      world.strikeLightning(S.pos.x - 140, S.pos.z - 260);
+      world.strikeLightning(S.pos.x + 100, S.pos.z - 240);
+      world.strikeLightning(S.pos.x + 220, S.pos.z - 320);
+      S.lightningTimer = 30; // pause the live storm timer so no extra bolts pile up during the still
     }
     else if (shot === 'carrier') {
       // ref 3: jet LARGE and centred (chase cam, not first-person) with the instrument panel overlaid
