@@ -1003,12 +1003,23 @@ function drawRadar() {
 
 // ---------- camera + loop ----------
 function updateCamera(dt) {
+  // the close storm-approach mountain wall (built for the storm landing shot) fills
+  // the menu frame with one huge dark slab behind the jet — hide it in menu mode so
+  // the backdrop reads as canyon pillars + sunset like the bd32110 cover; flying
+  // modes (storm / play / carrier) keep it
+  if (world.mountainWall) world.mountainWall.visible = S.mode !== 'menu';
   if (S.mode === 'menu') {
-    // fixed hero angle: the jet never drifts into a rear view — 3/4 front, nose toward camera-left, wings LEVEL, big on the right (ref 2: the plane is parked level on display, not diving diagonally — the old pitch -0.55 / roll 0.45 made it look nose-down)
+    // fixed hero angle: the jet never drifts into a rear view — 3/4 FRONT, nose toward
+    // camera-left AND toward the viewer (ref 2: the plane is parked level on display,
+    // nose + cockpit windows visible, wings spread toward the camera). The nose points
+    // along local -Z, so yaw θ puts the nose at (-sin θ, 0, -cos θ); the camera sits
+    // ~47° off the nose axis at yaw 2.62 (nose ≈ (-0.50, 0, 0.87), camera dir from
+    // the jet ≈ (0.29, 0, 0.96)). The old yaw 2.05 put the nose ~79° off the camera
+    // axis — a flat side profile with a dark blunt nose on the left.
     const r = 64 + S.orbitDrag;
     camera.position.set(Math.sin(S.menuAngle) * r, 76 + Math.sin(S.time * 0.2) * 4, 520 + Math.cos(S.menuAngle) * r);
     camera.lookAt(-14, 88, 520);
-    menuJet.rotation.set(0, 2.05, 0, 'YXZ'); // level 3/4 front: pitch 0, roll 0, yaw 2.05 puts the nose toward camera-left with the wings horizontal
+    menuJet.rotation.set(0, 2.90, 0, 'YXZ'); // level 3/4 front: pitch 0, roll 0, yaw 2.90 = nose ~31° off the camera ray, toward camera-left + toward viewer — near head-on like ref 2 (nose + cockpit windows visible, wings spread toward the camera)
     menuJet.position.y = 74 + Math.sin(S.time * 0.8) * 3;
     // afterburner flicker
     if (menuJet.userData.abGlow) { const f = 1 + Math.sin(S.time * 13) * 0.12 + Math.sin(S.time * 29) * 0.06; menuJet.userData.abGlow.scale.set(17 * f, 17 * f, 1); }
