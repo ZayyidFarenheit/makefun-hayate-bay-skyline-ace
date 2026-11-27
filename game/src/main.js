@@ -1090,10 +1090,15 @@ function setupShot(shot) {
       world.holdLightning = true;
       // HERO bolt dead-centre on the approach line over the mountains + two smaller white companions off-axis.
       // Hero sits at z 560 — in FRONT of the nearest karst pillar row (z 500), which occluded it at z 450 —
-      // and SHORT (topY 160) so the whole bolt fits inside the chase camera's frame (its top was above the
-      // frame at topY 300). Chase camera pulled in (12 vs 16) so the jet reads bigger on final.
+      // and TALL (topY 300, 12 segments) so it spans from above the top edge of the frame down behind the jet,
+      // like the CALDERA reference bolt. Chase camera pulled in (12 vs 16) so the jet reads bigger on final.
       S.chaseDist = 12;
-      world.strikeLightning(180, 560, true, 160); // ONE hero bolt only — companions read as a second competing bolt and broke the reference's single-bolt look
+      world.strikeLightning(180, 560, true, 300); // ONE hero bolt only — companions read as a second competing bolt and broke the reference's single-bolt look
+      // Kill the strike's flash light: a HELD hero bolt leaves the white point light on forever, and it
+      // bleaches the whole storm scene pale (bright turquoise sea, tan pillars, washed-out sky) — verified
+      // by A/B test: flash 0 = the dark slate storm of the 172f943 take, flash 3.5/5 = daytime washout.
+      // The bolt itself is unlit white MeshBasicMaterial, so it stays crisp and bright with no flash.
+      world.flashLight.intensity = 0;
       S.dialogueQueue = [{ name: 'Capt. Kenji Sato', text: RADIO.kenji[3] }]; S.dlgTimer = 0;
       S.lightningTimer = 30; // pause the live storm timer so no extra bolts pile up during the still
     }

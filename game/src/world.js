@@ -338,8 +338,9 @@ export class World {
   // tiny 64×90 glow at 0.16 opacity) — the thin sharp branching white bolt over the
   // mountains in the CALDERA storm-landing reference. The previous hero (core r18 +
   // halo r26 + 260×340 glow, Catmull-Rom smoothed) read as a white flash blob.
-  // topY: bolts for stills start low (topY ~160) so the whole zigzag sits inside the frame
-  // instead of towering above it — the live storm still uses the default 520.
+  // topY: the hero bolt for stills is TALL (topY ~300) so it spans from above the top
+  // edge of the frame down behind the jet, like the CALDERA reference bolt — the live
+  // storm still uses the default 520.
   strikeLightning(cx, cz, hero, topY) {
     const group = new T.Group();
     const baseX = (cx !== undefined ? cx : 0) + (Math.random() - 0.5) * (hero ? 20 : 80);
@@ -356,13 +357,15 @@ export class World {
     };
     if (hero) {
       // CRISP HERO BOLT (CALDERA reference: thin bright-white line, hard edges, long
-      // sharp zigzag segments + long forks, almost no glow): 8 segments so several
-      // sharp kinks land in the visible window between the Fever bar and the banner,
-      // sawtooth walk alternating ±(30–48) per step, clamped to ±65 of the centreline
-      // so the bolt stays dead-centre in frame; core r3, NO halo tube, tiny faint glow
-      // (see below). (r18 core + r26 halo + 260×340 glow is what turned the last bolt
-      // into a white blob.)
-      const segs = 8, drop = top / segs;
+      // sharp zigzag segments + long forks, almost no glow): 12 TALL segments so the
+      // bolt spans from above the top edge of the frame down behind the jet — the top
+      // is deliberately above the frame (like the reference, where the bolt enters
+      // from the top edge), and ~7 kinks stay visible between the top edge and the
+      // banner. Sawtooth walk alternating ±(30–48) per step, clamped to ±65 of the
+      // centreline so the bolt stays dead-centre in frame; core r3, NO halo tube,
+      // tiny faint glow (see below). (r18 core + r26 halo + 260×340 glow is what
+      // turned the last bolt into a white blob.)
+      const segs = 12, drop = top / segs;
       const pts = []; let x = baseX, y = top, z = baseZ, dir = Math.random() < 0.5 ? -1 : 1;
       for (let i = 0; i < segs; i++) {
         pts.push(new T.Vector3(x, y, z));
@@ -372,7 +375,7 @@ export class World {
       }
       pts.push(new T.Vector3(x, 0, z));
       group.add(tubeFromPts(pts, 3, coreMat, 32)); // thin white-hot core, hard edges
-      for (const bi of [1, 3, 5]) { // 3 SHORT forks close to the main bolt (long branches read as separate streaks crossing the frame)
+      for (const bi of [2, 5, 8]) { // 3 SHORT forks spread along the tall bolt (long branches read as separate streaks crossing the frame)
         const bp = pts[bi]; const bpts = [bp.clone()]; let bx = bp.x, by = bp.y, bz = bp.z;
         const bdir = Math.random() < 0.5 ? -1 : 1;
         for (let i = 0; i < 2; i++) { bx += bdir * (20 + Math.random() * 12); by -= 22 + Math.random() * 8; bz += (Math.random() - 0.5) * 12; bpts.push(new T.Vector3(bx, by, bz)); }
