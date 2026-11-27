@@ -22,29 +22,42 @@ button{font-family:inherit;cursor:pointer}
 #flash{position:fixed;inset:0;z-index:25;pointer-events:none;background:radial-gradient(circle,rgba(255,240,200,.95),rgba(255,120,20,.75));opacity:0}
 /* ---------- MENU ---------- */
 #menu{position:fixed;inset:0;z-index:20;display:flex;pointer-events:none}
-#menuPanel{pointer-events:auto;width:min(600px,94vw);max-height:calc(100vh - 16px);overflow-y:auto;margin:8px;background:var(--teal2);border:1px solid var(--line);border-radius:16px;padding:10px 14px}
-#menuPanel h1{font-size:24px;color:var(--gold);letter-spacing:.1em;line-height:1.05}
+#menuPanel{pointer-events:auto;width:min(600px,94vw);max-height:calc(100vh - 16px);overflow-y:auto;margin:8px;background:var(--teal2);border:1px solid var(--line);border-radius:16px;padding:8px 14px}
+#menuPanel h1{font-size:22px;color:var(--gold);letter-spacing:.1em;line-height:1.05}
 #menuPanel h1 span{color:#fff}
-#menuSub{color:var(--mint);font-size:11px;letter-spacing:.18em;margin:3px 0 7px}
+#menuSub{color:var(--mint);font-size:11px;letter-spacing:.18em;margin:2px 0 5px}
 .cols{display:flex;gap:10px;flex-wrap:wrap}
 .col{flex:1;min-width:210px}
 .col h2{font-size:12px;color:var(--gold);margin:5px 0 4px}
-.row{display:flex;justify-content:space-between;gap:8px;padding:4px 8px;font-size:12.5px;border:1px solid rgba(45,212,168,.35);border-radius:8px;margin-bottom:3px;cursor:pointer;background:rgba(255,255,255,.03)}
+.row{display:flex;justify-content:space-between;gap:8px;padding:1px 8px;font-size:11px;border:1px solid rgba(45,212,168,.35);border-radius:8px;margin-bottom:2px;cursor:pointer;background:rgba(255,255,255,.03)}
+.row .medal{color:var(--gold);font-weight:800;font-size:10px;white-space:nowrap}
+#careerStats{display:flex;gap:6px;margin:4px 0 2px}
+#careerStats .cs{flex:1;text-align:center;border:1px solid rgba(45,212,168,.4);border-radius:8px;padding:3px 2px;background:rgba(0,0,0,.25)}
+#careerStats .cs b{display:block;font-size:15px;color:#fff}
+#careerStats .cs span{font-size:9px;color:var(--mint);letter-spacing:.1em}
+#menuMap{width:100%;height:48px;border-radius:10px;border:1px solid rgba(45,212,168,.4);margin-top:4px;display:block}
+.fuelbar{margin-top:4px}
+.fuelbar .fl{display:flex;justify-content:space-between;font-size:10px;color:var(--mint);letter-spacing:.06em}
+.fuelbar .bar{height:7px;margin:2px 0 0}
+#crewRow{display:flex;gap:6px;margin-top:4px}
+#crewRow .crew{flex:1;border:1px solid rgba(45,212,168,.4);border-radius:8px;padding:4px 6px;background:rgba(0,0,0,.25);font-size:10px;line-height:1.35}
+#crewRow .crew b{color:#fff;font-size:11px}
+#crewRow .crew .pct{color:var(--gold);font-weight:800}
 .row:hover{border-color:var(--gold)}
 .row.sel{border-color:var(--gold);background:rgba(255,215,106,.14);box-shadow:0 0 0 1px var(--gold)}
 .row.locked{opacity:.45;cursor:not-allowed}
 .row .xp{color:var(--gold);white-space:nowrap}
 .row.flag{border-color:var(--gold);background:linear-gradient(90deg,rgba(255,215,106,.22),rgba(255,215,106,.05))}
-.jetcard{border:1px solid rgba(45,212,168,.4);border-radius:10px;padding:6px 8px;margin-bottom:5px;cursor:pointer;background:rgba(255,255,255,.03);font-size:13px}
+.jetcard{border:1px solid rgba(45,212,168,.4);border-radius:10px;padding:4px 8px;margin-bottom:4px;cursor:pointer;background:rgba(255,255,255,.03);font-size:13px}
 .jetcard.sel{border-color:var(--gold);background:rgba(255,215,106,.13)}
 .jetcard b{color:#fff;letter-spacing:.06em}
 .stats{font-size:10px;color:var(--mint);margin-top:2px}
 .pills{display:flex;flex-wrap:wrap;gap:4px}
-.pill{border:1px solid var(--line);border-radius:999px;padding:3px 7px;font-size:10px;background:rgba(0,0,0,.25);color:var(--ink);cursor:pointer}
+.pill{border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:10px;background:rgba(0,0,0,.25);color:var(--ink);cursor:pointer}
 .pill.on{background:var(--green);color:#04150a;border-color:var(--green);font-weight:700}
 .pill .pr{color:var(--gold)}
-#debrief{border:1px solid var(--gold);border-radius:10px;padding:6px 9px;margin-top:6px;font-size:11px;line-height:1.35}
-#launch{width:auto;min-width:280px;display:block;margin:8px auto 0;padding:9px 28px;font-size:17px;font-weight:800;letter-spacing:.1em;color:#04150a;background:var(--green);border:0;border-radius:12px;box-shadow:0 4px 0 #15803d,0 8px 22px rgba(0,0,0,.4)}
+#debrief{border:1px solid var(--gold);border-radius:10px;padding:4px 9px;margin-top:5px;font-size:11px;line-height:1.3}
+#launch{width:auto;min-width:280px;display:block;margin:6px auto 0;padding:8px 28px;font-size:16px;font-weight:800;letter-spacing:.1em;color:#04150a;background:var(--green);border:0;border-radius:12px;box-shadow:0 4px 0 #15803d,0 8px 22px rgba(0,0,0,.4)}
 #launch:hover{filter:brightness(1.12)}
 #launch:active{transform:translateY(3px);box-shadow:0 3px 0 #15803d}
 #menuHint{position:fixed;right:16px;bottom:12px;z-index:21;color:var(--mint);font-size:11px;letter-spacing:.1em;text-align:right;text-shadow:0 1px 4px #000}
@@ -53,25 +66,36 @@ button{font-family:inherit;cursor:pointer}
 #hud .panel{pointer-events:none}
 #hudTL{position:absolute;top:10px;left:10px;width:300px}
 #hudTL h3{font-size:14px;color:#fff}
+#trimPill{float:right;background:var(--green);color:#04150a;font-weight:800;border-radius:6px;padding:1px 7px;font-size:10px}
 #stagebar{height:7px;background:#123;border-radius:4px;overflow:hidden;margin:5px 0}
 #stagefill{height:100%;width:0;background:linear-gradient(90deg,#22c55e,#7ff0d4)}
 .obj{font-size:12px;line-height:1.7}
 .obj .done{color:var(--mint)} .obj .todo{color:#fff}
 #score{font-size:24px;font-weight:800;color:var(--gold)}
+#advisor{margin-top:7px;border-top:1px solid rgba(45,212,168,.35);padding-top:6px;font-size:11px;line-height:1.5;color:#fff}
+#advisor .gold{font-weight:800}
 #hudTC{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:min(520px,52vw);text-align:center}
 #compass{font-size:12px;letter-spacing:.25em;color:var(--mint);background:var(--teal);border:1px solid var(--line);border-radius:8px;padding:4px 8px;white-space:nowrap;overflow:hidden}
-#hdg{font-size:12px;margin-top:3px;color:#fff}
+#hdg{font-size:12px;margin-top:3px;color:#fff;background:var(--teal);border:1px solid var(--line);border-radius:8px;padding:3px 8px;display:inline-block}
+#hdg b{color:var(--gold)}
 #feverWrap{margin-top:5px;background:var(--teal);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
 #feverLabel{font-size:12px;font-weight:800;color:var(--gold);letter-spacing:.08em}
 #feverBar{height:10px;border-radius:5px;background:#123;overflow:hidden;margin:4px 0 2px}
 #feverFill{height:100%;width:0;background:linear-gradient(90deg,#ff3b30,#ff9a3d,#ffd76a,#22c55e,#35e0d0)}
 #feverTiers{display:flex;justify-content:space-between;font-size:9px;color:var(--mint);letter-spacing:.05em}
 #hudTR{position:absolute;top:10px;right:10px;width:300px;text-align:right}
-#hudTR .abil{margin-top:6px;font-size:11px;color:var(--mint);line-height:1.6}
-#hudTR .contacts{margin-top:6px;font-size:11px;line-height:1.6;text-align:left}
+#hudTR .navhead{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:800;color:#fff;letter-spacing:.1em}
+#hudTR .navhead .modechip{background:var(--green);color:#04150a;border-radius:6px;padding:1px 7px;font-size:10px}
+#navmap{width:150px;height:150px;border-radius:8px;border:1px solid rgba(45,212,168,.5);margin-top:6px;background:#062a24}
+.navrow{display:flex;justify-content:space-between;font-size:11px;color:#fff;line-height:1.7;text-align:left}
+.navrow b{color:var(--mint);font-weight:400}
+.navbtns{display:flex;gap:4px;margin-top:5px}
+.navbtns span{flex:1;border:1px solid var(--line);border-radius:6px;padding:2px 0;font-size:10px;text-align:center;color:var(--mint)}
+#hudTR .abil{margin-top:5px;font-size:10px;color:var(--mint);line-height:1.5}
+#hudTR .contacts{margin-top:5px;font-size:10px;line-height:1.45;text-align:left}
 #gustPill{display:inline-block;background:var(--orange);color:#201000;font-weight:800;border-radius:999px;padding:2px 9px;font-size:11px;margin-top:5px}
 #hudBL{position:absolute;left:10px;bottom:10px;width:250px}
-#radar{width:150px;height:150px;border-radius:50%;border:2px solid var(--line);background:radial-gradient(circle,#0a3d33 0%,#062a24 70%);display:block}
+#radar{width:120px;height:120px;border-radius:50%;border:2px solid var(--line);background:radial-gradient(circle,#0a3d33 0%,#062a24 70%);display:block}
 .bar{height:8px;background:#123;border-radius:4px;overflow:hidden;margin:3px 0 6px}
 .bar>i{display:block;height:100%}
 #hudBR{position:absolute;right:10px;bottom:10px;width:300px;text-align:right}
@@ -82,11 +106,33 @@ button{font-family:inherit;cursor:pointer}
 .chip{display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:10px;margin-left:4px;color:var(--mint)}
 .chip.lit{background:var(--green);color:#04150a;border-color:var(--green);font-weight:800}
 .chip.litY{background:var(--gold);color:#201600;border-color:var(--gold);font-weight:800}
-#dialog{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);width:min(560px,86vw);display:flex;gap:10px;align-items:center;background:var(--teal);border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+#ctrlList{font-size:10px;color:var(--mint);line-height:1.6;margin-top:5px;text-align:right}
+/* side IAS / ALT tapes (CALDERA-style) */
+.tape{position:absolute;top:46%;width:64px;background:var(--teal);border:1px solid var(--line);border-radius:8px;padding:5px 4px;text-align:center;font-size:10px;color:var(--mint);line-height:1.5;z-index:9}
+#tapeL{left:322px}
+#tapeR{right:322px}
+.tape .tval{display:block;background:var(--green);color:#04150a;font-weight:800;font-size:13px;border-radius:5px;padding:2px 0;margin:3px 0}
+/* touchdown grading box (CALDERA-style) */
+#tdBox{position:absolute;left:10px;top:44%;width:300px;display:none;z-index:9}
+#tdBox .grade{font-size:15px;font-weight:800;color:#fff}
+#tdBox .grade b{color:var(--gold)}
+#tdBox .tdgrid{display:flex;gap:6px;margin-top:5px}
+#tdBox .tdcell{flex:1;border:1px solid rgba(45,212,168,.4);border-radius:8px;padding:5px 6px;background:rgba(0,0,0,.3)}
+#tdBox .tdcell .k{font-size:9px;color:var(--mint);letter-spacing:.08em}
+#tdBox .tdcell .v{font-size:13px;font-weight:800;color:#fff}
+/* bottom instrument cluster (CALDERA-style) */
+#cluster{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(660px,94vw);background:linear-gradient(180deg,#0d2b26,#071a17);border:1px solid #1f6f5a;border-bottom:0;border-radius:12px 12px 0 0;padding:6px 10px 8px;display:flex;gap:10px;align-items:center;justify-content:center;z-index:9}
+#cluster .cg{text-align:center;color:var(--mint);font-size:9px;letter-spacing:.08em}
+#cluster .cg canvas{width:56px;height:56px;display:block;margin:0 auto 1px}
+#cluster .cg .cv{color:#fff;font-size:12px;font-weight:800}
+#cluster .cfuel{width:170px;text-align:left;font-size:10px;color:var(--mint);line-height:1.5}
+#cluster .cfuel .bar{height:6px;margin:2px 0 4px}
+#dialog{position:absolute;left:10px;bottom:10px;width:300px;display:flex;gap:10px;align-items:center;background:var(--teal);border:1px solid var(--line);border-radius:12px;padding:8px 12px;z-index:9}
+#dlgHead{color:var(--gold);font-weight:800;font-size:11px;letter-spacing:.08em}
 #portrait{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd76a,#c96a1e 60%,#5a2c05);display:flex;align-items:center;justify-content:center;font-weight:800;color:#201600;font-size:18px;flex:none;border:2px solid var(--gold)}
 #dlgName{color:var(--gold);font-weight:800;font-size:12px;letter-spacing:.08em}
 #dlgText{font-size:13px;line-height:1.35}
-#routePill{position:absolute;left:50%;bottom:88px;transform:translateX(-50%);background:var(--teal);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:11px;color:var(--mint);white-space:nowrap}
+#routePill{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);background:var(--teal);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:11px;color:var(--mint);white-space:nowrap}
 #banner{position:absolute;left:50%;top:32%;transform:translate(-50%,-50%) scale(.8);z-index:15;text-align:center;color:var(--gold);font-size:26px;font-weight:800;letter-spacing:.06em;text-shadow:0 2px 12px #000,0 0 30px rgba(255,215,106,.5);opacity:0;border-top:2px solid var(--gold);border-bottom:2px solid var(--gold);padding:8px 26px;background:rgba(5,38,34,.55);border-radius:4px;pointer-events:none}
 #banner.show{opacity:1}
 #warn{position:absolute;left:50%;top:58%;transform:translateX(-50%);color:var(--red);font-weight:800;font-size:18px;letter-spacing:.1em;text-shadow:0 1px 6px #000;display:none}
@@ -97,14 +143,25 @@ button{font-family:inherit;cursor:pointer}
 #cockpit .frame{position:absolute;inset:0;border:10px solid transparent;border-image:linear-gradient(180deg,rgba(10,30,28,.95),rgba(10,30,28,.7)) 1;box-shadow:inset 0 0 50px rgba(0,0,0,.4)}
 #glare{position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.10) 0%,transparent 30%,transparent 70%,rgba(255,255,255,.06) 100%)}
 #ladder{position:absolute;left:50%;top:16%;transform:translateX(-50%);color:#39ff88;font-size:12px;text-align:center;text-shadow:0 0 6px #0f0;line-height:1.9}
-#cockpitRead{position:absolute;left:50%;top:6%;transform:translateX(-50%);color:#39ff88;font-weight:800;font-size:15px;letter-spacing:.08em;text-shadow:0 0 8px #0f0}
-#instr{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(860px,96vw);background:linear-gradient(180deg,#0d2b26,#071a17);border:1px solid #1f6f5a;border-bottom:0;border-radius:14px 14px 0 0;padding:8px 14px 10px;display:flex;gap:14px;align-items:center;justify-content:center;pointer-events:auto}
+#cockpitRead{display:none}
+#instr{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(900px,96vw);background:linear-gradient(180deg,#0d2b26,#071a17);border:1px solid #1f6f5a;border-bottom:0;border-radius:14px 14px 0 0;padding:8px 14px 10px;display:flex;flex-direction:column;gap:6px;align-items:stretch;pointer-events:auto}
+#cockpitChips{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+#cockpitChips .cchip{border:1px solid #39ff88;color:#39ff88;border-radius:6px;padding:3px 8px;font-size:10px;letter-spacing:.06em}
+#cockpitChips .cchip.warn{border-color:var(--gold);color:var(--gold)}
+#instrRow{display:flex;gap:12px;align-items:center;justify-content:center}
+#gaugeGrid{display:grid;grid-template-columns:repeat(3,86px);gap:6px 10px}
 .gauge{width:86px;text-align:center;color:var(--mint);font-size:10px;letter-spacing:.08em}
-.gauge .dial{width:74px;height:74px;border-radius:50%;border:2px solid #39ff88;margin:0 auto 3px;position:relative;background:radial-gradient(circle,#0a2e26,#04120f)}
+.gauge .dial{width:74px;height:74px;border-radius:50%;border:2px solid #39ff88;margin:0 auto 3px;position:relative;background:radial-gradient(circle,#0a2e26,#04120f);overflow:hidden}
 .gauge .needle{position:absolute;left:50%;top:50%;width:2px;height:30px;background:#ffd76a;transform-origin:50% 0;transform:translateX(-50%) rotate(0deg)}
 .gauge .val{color:#fff;font-size:13px;font-weight:800}
-#thr{width:26px;height:90px;background:#123;border:1px solid #39ff88;border-radius:8px;position:relative;cursor:ns-resize}
-#thrKnob{position:absolute;left:-4px;width:32px;height:14px;background:var(--gold);border-radius:4px;bottom:10%}
+#navStack{width:190px;font-size:10px;color:var(--mint);line-height:1.6;text-align:left}
+#navStack .nshead{color:var(--gold);font-weight:800;letter-spacing:.08em;font-size:10px}
+#navStack .nsrow{display:flex;justify-content:space-between;border-bottom:1px solid rgba(57,255,136,.25);padding:1px 0}
+#navStack .nsrow b{color:#fff}
+.thrCol{text-align:center}
+.thrCol .small{color:var(--mint)}
+#thr,#thr2{width:26px;height:90px;background:#123;border:1px solid #39ff88;border-radius:8px;position:relative;cursor:ns-resize}
+#thrKnob,#thrKnob2{position:absolute;left:-4px;width:32px;height:14px;background:var(--gold);border-radius:4px;bottom:10%}
 .statBtn{border:1px solid #39ff88;color:#39ff88;background:transparent;border-radius:6px;padding:5px 8px;font-size:10px;letter-spacing:.06em}
 .statBtn.lit{background:#22c55e;color:#04150a;font-weight:800;border-color:#22c55e}
 #cockpitDlg{position:absolute;left:50%;bottom:128px;transform:translateX(-50%);width:min(480px,88vw)}
@@ -119,6 +176,13 @@ button{font-family:inherit;cursor:pointer}
  #hudBR{width:220px} #speed{font-size:26px}
  #menuPanel h1{font-size:22px}
  #dialog{left:auto;right:10px;transform:none;width:min(320px,44vw);bottom:210px}
+ .tape{display:none}
+ #cluster .cg.vsi{display:none}
+ #cluster{width:96vw}
+ #tdBox{width:200px}
+ #gaugeGrid{grid-template-columns:repeat(3,64px)}
+ .gauge{width:64px} .gauge .dial{width:56px;height:56px}
+ #navStack{display:none}
 }
 </style>
 </head>
@@ -132,9 +196,23 @@ button{font-family:inherit;cursor:pointer}
   <div id="menuPanel">
     <h1>HAYATE BAY: <span>SKYLINE ACE</span></h1>
     <div id="menuSub">MISSION SELECT · 12 SORTIES + 4 BONUS · BOSS: VOID ACE · <span class="gold">★ TRUE 6DOF FLIGHT MODEL</span></div>
+    <div id="careerStats">
+      <div class="cs"><b id="csSorties">12</b><span>SORTIES</span></div>
+      <div class="cs"><b>3</b><span>AIRFRAMES</span></div>
+      <div class="cs"><b id="csGold">0/12</b><span>GOLD MEDALS</span></div>
+      <div class="cs"><b id="csCareer">0%</b><span>CAREER</span></div>
+    </div>
     <div class="cols">
       <div class="col"><h2>Sorties</h2><div id="sortieList"></div><h2>Bonus</h2><div id="bonusList"></div></div>
       <div class="col"><h2>Jets</h2><div id="jetList"></div><h2>12 Refits</h2><div class="pills" id="refitList"></div><div id="debrief"></div></div>
+    </div>
+    <canvas id="menuMap" width="1160" height="48"></canvas>
+    <div class="fuelbar"><div class="fl"><span>WING FUEL TANKS</span><span class="gold">68% (95 GAL · 42 MIN)</span></div><div class="bar"><i style="width:68%;background:#ffd76a"></i></div></div>
+    <div class="fuelbar"><div class="fl"><span>AIRMAIL &amp; MEDEVAC CARGO</span><span class="gold">380 KG</span></div><div class="bar"><i style="width:64%;background:#35e0d0"></i></div></div>
+    <div id="crewRow">
+      <div class="crew"><b>01 · CAPT. KENJI SATO</b><br>29.5h · 9/12 ACE · Best -89 FPM <span class="pct">100%</span></div>
+      <div class="crew"><b>02 · F/O MAYA RUIZ</b><br>11.2h · 6/12 GOLD · Best -134 FPM <span class="pct">75%</span></div>
+      <div class="crew"><b>03 · CHIEF TARIQ HADDAD</b><br>18.4h · 3/12 GOLD · Best -108 FPM <span class="pct">50%</span></div>
     </div>
     <button id="launch">▶ LAUNCH SORTIE</button>
     <div class="small mint" style="margin-top:4px;font-size:10px">ENTER launch · C cockpit · V camera · G gear · F flaps · SHIFT afterburner · SPACE airbrake · 1/2/3 radio · R retry · M mute · P pause<br><span class="gold">★ 6DOF: J / L strafe left / right · I / K vertical thrust up / down (or PgUp / PgDn) — strafe &amp; lift without turning</span></div>
@@ -143,12 +221,22 @@ button{font-family:inherit;cursor:pointer}
 <div id="menuHint">LIVE 3D · SUNSET CANYON<br>DRAG TO ORBIT · SCROLL TO ZOOM</div>
 
 <div id="hud">
-  <div class="panel" id="hudTL"><div class="mint small" id="hudSortie">SORTIE 5/12 · SKYLINE SEASON</div><h3 id="hudMission">CANYON GOLDEN HOUR</h3><div class="small" id="hudStage">STAGE 1/3</div><div id="stagebar"><div id="stagefill"></div></div><div class="obj" id="objectives"></div><div>SCORE <span id="score">0</span></div></div>
-  <div id="hudTC"><div id="compass">032&nbsp;&nbsp;047&nbsp;&nbsp;062&nbsp;&nbsp;077&nbsp;&nbsp;092&nbsp;&nbsp;107&nbsp;&nbsp;122</div><div id="hdg">HDG 092°</div><div id="feverWrap"><div id="feverLabel">★ JETSTREAM FEVER! ×1</div><div id="feverBar"><div id="feverFill"></div></div><div id="feverTiers"><span>CRUISE ×1</span><span>TAILWIND ×2</span><span>AFTERBURN ×4</span><span>★ FEVER ×8</span></div></div></div>
-  <div class="panel" id="hudTR"><div id="clock">17:35 · DAY 10 · $58,400</div><div class="gold small" id="rankLine">★ RANK 5 · BAY ACE · 190 XP</div><span id="gustPill">GUST 26 KT</span><div class="abil">[1] RADAR PULSE (Kenji) <span id="cd1"></span><br>[2] TURBO CHILL (Maya) <span id="cd2"></span><br>[3] FLARE SALVO (Tariq) <span id="cd3"></span></div><div class="contacts" id="contacts"></div></div>
-  <div class="panel" id="hudBL"><canvas id="radar" width="300" height="300"></canvas><div class="small mint" style="text-align:center">Hayate Bay · Dragon Span</div><div class="small">FUEL <span id="fuelPct">100%</span></div><div class="bar"><i id="fuelBar" style="width:100%;background:#22c55e"></i></div><div class="small">HULL <span id="hullPct">100%</span></div><div class="bar"><i id="hullBar" style="width:100%;background:#35e0d0"></i></div><div class="small">HEAT <span id="heatPct">0%</span></div><div class="bar"><i id="heatBar" style="width:0%;background:#ff9a3d"></i></div></div>
-  <div class="panel" id="hudBR"><div class="gold small" id="jetName">K-21 SHINKAI</div><div id="speed">245 KT</div><div class="small" id="altHdg">426 FT · HDG 092°</div><div><span class="chip" id="chipGear">GEAR</span><span class="chip" id="chipFlaps">FLAPS</span><span class="chip" id="chipFever">FEVER ×1</span></div><div class="small mint" id="dof6" style="margin-top:6px">6DOF · STRF +0 · VERT +0</div><div class="small mint" style="margin-top:6px">♫ Kaze FM 101.5 — “Emerald Jetstream” — Future Synth</div><div id="eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-  <div id="dialog"><div id="portrait">K</div><div><div id="dlgName">CAPT. KENJI SATO · BAY FLIGHT DIRECTOR</div><div id="dlgText">Canyon Golden Hour… look at that light. Fly it like you mean it.</div></div></div>
+  <div class="panel" id="hudTL"><span id="trimPill">TRIM 100%</span><div class="mint small" id="hudSortie">SORTIE 5/12 · SKYLINE SEASON</div><h3 id="hudMission">CANYON GOLDEN HOUR</h3><div class="small" id="hudStage">STAGE 1/3</div><div id="stagebar"><div id="stagefill"></div></div><div class="obj" id="objectives"></div><div>SCORE <span id="score">0</span></div><div id="advisor"></div></div>
+  <div id="hudTC"><div id="compass">032&nbsp;&nbsp;047&nbsp;&nbsp;062&nbsp;&nbsp;077&nbsp;&nbsp;092&nbsp;&nbsp;107&nbsp;&nbsp;122</div><div id="hdg">HDG <b>092°</b> · RWY <b>27</b> (0.37 NM)</div><div id="feverWrap"><div id="feverLabel">★ JETSTREAM FEVER! ×1</div><div id="feverBar"><div id="feverFill"></div></div><div id="feverTiers"><span>CRUISE ×1</span><span>TAILWIND ×2</span><span>AFTERBURN ×4</span><span>★ FEVER ×8</span></div></div></div>
+  <div class="panel" id="hudTR"><div class="navhead"><span>HAYATE NAV &amp; ILS</span><span class="modechip" id="navMode">CHASE [V]</span></div><canvas id="radar" width="300" height="300"></canvas><div class="navrow"><span>RUNWAY</span><b id="navRwy">RWY 27 (270°)</b></div><div class="navrow"><span>ILS / PAPI</span><b id="navIls">LOCK 2.8° 2W/2R</b></div><div class="navrow"><span>WIND</span><b id="navWind">284° / 16K</b></div><div class="navrow"><span>MIXTURE</span><b>AUTO CRUISE</b></div><div class="navrow"><span>AIRFRAME</span><b id="navAir">98% OK</b></div><div class="navbtns"><span>Cam [V]</span><span>Mix [M]</span><span>Flap [F]</span><span>Gear [G]</span><span>Hangar</span></div><div id="clock">17:35 · DAY 10 · $58,400</div><div class="gold small" id="rankLine">★ RANK 5 · BAY ACE · 190 XP</div><span id="gustPill">GUST 26 KT</span><div class="abil">[1] RADAR PULSE (Kenji) <span id="cd1"></span><br>[2] TURBO CHILL (Maya) <span id="cd2"></span><br>[3] FLARE SALVO (Tariq) <span id="cd3"></span></div><div class="contacts" id="contacts"></div></div>
+  <div class="tape" id="tapeL">IAS<span class="tval" id="tapeLVal">144 KT</span><span id="tapeLTicks">170<br>160<br>150<br>140<br>130</span><div class="small" style="margin-top:3px">THR <span id="tapeThr">72%</span></div></div>
+  <div class="tape" id="tapeR">ALT<span class="tval" id="tapeRVal">161 FT</span><span id="tapeRTicks">400<br>300<br>200<br>100<br>0</span><div class="small" style="margin-top:3px">AGL <span id="tapeAgl">161</span></div></div>
+  <div class="panel" id="tdBox"><div class="gold small">TOUCHDOWN</div><div class="grade" id="tdGrade">A+ BUTTER <b>(98/100)</b></div><div class="small" id="tdNote">Text-book STOL flare on RWY 27 — smooth oleo compression, +1m centerline, 347m stop.</div><div class="tdgrid"><div class="tdcell"><div class="k">SINK RATE</div><div class="v" id="tdSink">-112 FPM</div></div><div class="tdcell"><div class="k">CENTERLINE</div><div class="v" id="tdCenter">+1m OFF</div></div><div class="tdcell"><div class="k">STOP ROLLOUT</div><div class="v" id="tdRoll">347m (35° FLP)</div></div></div></div>
+  <div id="cluster">
+    <div class="cg"><canvas id="gSpd" width="112" height="112"></canvas>SPD<div class="cv" id="cvSpd">245 KT</div></div>
+    <div class="cg"><canvas id="gAtt" width="112" height="112"></canvas>ATT<div class="cv" id="cvAtt">0°</div></div>
+    <div class="cg"><canvas id="gAlt" width="112" height="112"></canvas>ALT<div class="cv" id="cvAlt">426 FT</div></div>
+    <div class="cg"><canvas id="gHdg" width="112" height="112"></canvas>HDG<div class="cv" id="cvHdg">092°</div></div>
+    <div class="cg vsi"><canvas id="gVsi" width="112" height="112"></canvas>VSI<div class="cv" id="cvVsi">0 FPM</div></div>
+    <div class="cfuel"><div>K-21 SHINKAI · FUEL</div><div class="bar"><i id="fuelBar" style="width:100%;background:#22c55e"></i></div><div>FUEL <span id="fuelPct">100%</span> · HULL <span id="hullPct">100%</span></div><div class="bar"><i id="hullBar" style="width:100%;background:#35e0d0"></i></div><div>HEAT <span id="heatPct">0%</span> · GEAR:3G · FLP:15°</div><div class="bar"><i id="heatBar" style="width:0%;background:#ff9a3d"></i></div></div>
+  </div>
+  <div class="panel" id="hudBR"><div class="gold small" id="jetName">K-21 SHINKAI</div><div id="speed">245 KT</div><div class="small" id="altHdg">426 FT · HDG 092°</div><div><span class="chip" id="chipGear">GEAR</span><span class="chip" id="chipFlaps">FLAPS</span><span class="chip" id="chipFever">FEVER ×1</span></div><div class="small mint" id="dof6" style="margin-top:6px">6DOF · STRF +0 · VERT +0</div><div class="small mint" style="margin-top:6px">♫ Kaze FM 101.5 — “Emerald Jetstream” — Future Synth</div><div id="eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div id="ctrlList">W/S Throttle · J/L Strafe · I/K Vert<br>F / G Flaps / Gear · 1/2/3 Radio<br>Space Drop / Brakes · V / X Tab Cam</div></div>
+  <div id="dialog"><div id="portrait">K</div><div><div id="dlgHead">TOWER · KAZE ATC (118.75 MHz)</div><div id="dlgName">CAPT. KENJI SATO · BAY FLIGHT DIRECTOR</div><div id="dlgText">Canyon Golden Hour… look at that light. Fly it like you mean it.</div></div></div>
   <div id="routePill">ROUTE PLAN · 3 STOPS (1)→(2)→(3) · 1.0s</div>
   <div id="banner"></div><div id="warn"></div>
 </div>
@@ -159,12 +247,21 @@ button{font-family:inherit;cursor:pointer}
   <div id="ladder">+20° ───────<br>+10° ─────<br>0° ─── ✛ ───<br>-10° ─────<br>-20° ───────</div>
   <div id="cockpitDlg"><div id="dialog" style="position:static;transform:none;width:100%;bottom:auto"><div id="portrait">K</div><div><div id="dlgName">CAPT. KENJI SATO</div><div id="dlgText">Kaze Tower — cleared for Carrier Quals. Meatball is lit.</div></div></div></div>
   <div id="instr">
-    <div class="gauge"><div class="dial"><div class="needle" id="ndAtt"></div></div>ATT<div class="val" id="vAtt">0°</div></div>
-    <div class="gauge"><div class="dial"><div class="needle" id="ndKias"></div></div>KIAS<div class="val" id="vKias">141</div></div>
-    <div class="gauge"><div class="dial"><div class="needle" id="ndAlt"></div></div>ALT FT<div class="val" id="vAlt">179</div></div>
-    <div class="gauge"><div class="dial" style="background:radial-gradient(circle,#06281a,#020a06)"><canvas id="scope" width="70" height="70" style="border-radius:50%"></canvas></div>ILS · GLIDE LOCK<div class="val" id="vIls">LOCKED</div></div>
-    <div style="text-align:center"><div class="small mint">THR</div><div id="thr"><div id="thrKnob"></div></div></div>
-    <div style="display:flex;flex-direction:column;gap:5px"><button class="statBtn" id="stGear">GEAR DOWN</button><button class="statBtn" id="stFlaps">FLAPS 40°</button><button class="statBtn lit" id="stGlide">GLIDE LOCK</button><button class="statBtn" id="stHook">HOOK READY</button></div>
+    <div id="cockpitChips"><span class="cchip" id="ccIls">ILS LOC+GS</span><span class="cchip" id="ccPapi">PAPI 2W/2R</span><span class="cchip" id="ccFlaps">FLAPS 15°</span><span class="cchip" id="ccGear">GEAR 3-GRN</span><span class="cchip" id="ccEng">ENG NOMINAL</span><span class="cchip warn" id="ccMix">MIX: AUTO</span></div>
+    <div id="instrRow">
+      <div id="gaugeGrid">
+        <div class="gauge"><div class="dial"><div class="needle" id="ndKias"></div></div>KIAS<div class="val" id="vKias">141</div></div>
+        <div class="gauge"><div class="dial"><canvas id="attBall" width="148" height="148" style="width:74px;height:74px;border-radius:50%"></canvas></div>ATT<div class="val" id="vAtt">0°</div></div>
+        <div class="gauge"><div class="dial"><div class="needle" id="ndAlt"></div></div>ALT FT<div class="val" id="vAlt">179</div></div>
+        <div class="gauge"><div class="dial"><div class="needle" id="ndHdg"></div></div>HDG<div class="val" id="vHdg">062°</div></div>
+        <div class="gauge"><div class="dial"><div class="needle" id="ndVsi"></div></div>VSI<div class="val" id="vVsi">0</div></div>
+        <div class="gauge"><div class="dial" style="background:radial-gradient(circle,#06281a,#020a06)"><canvas id="scope" width="70" height="70" style="border-radius:50%"></canvas></div>ILS · GLIDE LOCK<div class="val" id="vIls">LOCKED</div></div>
+      </div>
+      <div id="navStack"><div class="nshead">COMS / NAVS AVIONICS STACK</div><div class="nsrow"><span>COM1</span><b>118.75</b><span>STBY 121.50</span></div><div class="nsrow"><span>NAV1</span><b>110.90</b><span>STBY 111.35</span></div><div class="nsrow"><span>XPDR</span><b>1200 ALT</b><span>IDENT</span></div><div class="nsrow"><span>ILS FREQ</span><b>110.90</b><span>GS 2.8°</span></div><div style="margin-top:4px">K-21 SHINKAI · FUEL <span id="cockFuel">100%</span></div><div class="bar"><i id="cockFuelBar" style="width:100%;background:#22c55e"></i></div><div>HEAT <span id="cockHeat">0%</span> · HULL <span id="cockHull">100%</span></div><div class="bar"><i id="cockHeatBar" style="width:0%;background:#ff9a3d"></i></div></div>
+      <div style="text-align:center" class="thrCol"><div class="small mint">THR</div><div id="thr"><div id="thrKnob"></div></div></div>
+      <div style="text-align:center" class="thrCol"><div class="small mint">MIX</div><div id="thr2"><div id="thrKnob2"></div></div></div>
+      <div style="display:flex;flex-direction:column;gap:5px"><button class="statBtn" id="stGear">GEAR DOWN</button><button class="statBtn" id="stFlaps">FLAPS 40°</button><button class="statBtn lit" id="stGlide">GLIDE LOCK</button><button class="statBtn" id="stHook">HOOK READY</button></div>
+    </div>
   </div>
 </div>
 

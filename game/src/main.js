@@ -36,7 +36,7 @@ const S = {
   dialogueQueue: [], dlgTimer: 0, bannerTimer: 0, lightningTimer: 5, rainOn: false,
   fpsEMA: 60, quality: 2, frames: 0, fpsTime: 0, menuAngle: 0.38, orbitDrag: 0,
   startPos: new T.Vector3(), checkpoint: null, landingSink: 0, lastVertSpeed: 0,
-  chaseDist: 16, shotChase: false, lookAhead: 18, chaseH: 6.5,
+  chaseDist: 16, shotChase: false, lookAhead: 18, chaseH: 6.5, shotFreeze: false, // staged shots freeze SCORE so it always equals the banner number
   debris: [], smokeArr: [], crashT: 0, wreckVy: 0, wreckSpin: 0, fireball: null, foam: null, flashT: 0,
 };
 const keys = {};
@@ -171,18 +171,26 @@ function isUnlocked(s) {
 function buildMenu() {
   const sl = $('sortieList'); sl.innerHTML = '';
   for (const s of SORTIES) {
+    const cleared = save.cleared.includes(s.n);
     const d = document.createElement('div'); d.className = 'row' + (s.flagship ? ' flag' : '') + (isUnlocked(s) ? '' : ' locked') + (S.sortieNum === s.n ? ' sel' : '');
-    d.innerHTML = `<span>${s.n} ${s.name}${s.flagship ? ' ★ FLAGSHIP' : ''}${save.cleared.includes(s.n) ? ' ✓' : ''}${isUnlocked(s) ? '' : ' 🔒'}</span><span class="xp">${s.xp} XP</span>`;
+    d.innerHTML = `<span>${s.n} ${s.name}${s.flagship ? ' ★ FLAGSHIP' : ''}${isUnlocked(s) ? '' : ' 🔒'}</span><span class="medal">${cleared ? '★ GOLD' : ''}</span><span class="xp">${s.xp} XP</span>`;
     d.onclick = () => { if (!isUnlocked(s)) { toast('Clear sortie ' + (s.n - 1) + ' first'); return; } selectSortie(s.n); };
     sl.appendChild(d);
   }
   const bl = $('bonusList'); bl.innerHTML = '';
   for (const s of BONUS) {
+    const cleared = save.cleared.includes(s.n);
     const d = document.createElement('div'); d.className = 'row' + (isUnlocked(s) ? '' : ' locked') + (String(S.sortieNum) === String(s.n) ? ' sel' : '');
-    d.innerHTML = `<span>${s.n} ${s.name}${save.cleared.includes(s.n) ? ' ✓' : ''}${isUnlocked(s) ? '' : ' 🔒'}</span><span class="xp">${s.xp} XP</span>`;
+    d.innerHTML = `<span>${s.n} ${s.name}${isUnlocked(s) ? '' : ' 🔒'}</span><span class="medal">${cleared ? '★ GOLD' : ''}</span><span class="xp">${s.xp} XP</span>`;
     d.onclick = () => { if (!isUnlocked(s)) { toast('Clear sortie 4 first'); return; } selectSortie(s.n); };
     bl.appendChild(d);
   }
+  // career stats (CALDERA hangar header): sorties flown, gold medals, career %
+  const gold = save.cleared.length;
+  $('csSorties').textContent = 12;
+  $('csGold').textContent = gold + '/12';
+  $('csCareer').textContent = Math.round((gold / 16) * 100) + '%';
+  drawMenuMap();
   const jl = $('jetList'); jl.innerHTML = '';
   for (const id of Object.keys(JETS)) {
     const j = JETS[id];
@@ -200,6 +208,24 @@ function buildMenu() {
     rl.appendChild(b);
   }
   updateDebrief();
+}
+function drawMenuMap() {
+  // hangar map strip (CALDERA-style): bay outline, dashed route, waypoints HCN / CLD / CV-04
+  const cv = $('menuMap'); if (!cv) return;
+  const g = cv.getContext('2d'); const W = cv.width, H = cv.height;
+  g.clearRect(0, 0, W, H);
+  g.fillStyle = '#062a24'; g.fillRect(0, 0, W, H);
+  g.strokeStyle = '#7fffd4'; g.lineWidth = 3;
+  g.beginPath(); g.moveTo(20, 40); g.bezierCurveTo(300, 12, 700, 42, 1080, 18); g.stroke(); // bay shoreline
+  g.beginPath(); g.moveTo(80, 46); g.bezierCurveTo(400, 28, 800, 40, 1040, 26); g.stroke();
+  // dashed gold route
+  g.strokeStyle = '#ffd76a'; g.setLineDash([12, 9]); g.lineWidth = 3;
+  g.beginPath(); g.moveTo(150, 24); g.lineTo(560, 16); g.lineTo(980, 26); g.stroke(); g.setLineDash([]);
+  const stops = [[150, 24, 'HCN · RWY 09'], [560, 16, 'CLD · RWY 27'], [980, 26, 'CV-04 SOLSTICE']];
+  for (const [x, y, label] of stops) {
+    g.fillStyle = '#ffd76a'; g.beginPath(); g.arc(x, y, 8, 0, 7); g.fill();
+    g.fillStyle = '#eafff6'; g.font = 'bold 15px Arial'; g.textAlign = 'center'; g.fillText(label, x, y + 22);
+  }
 }
 function updateDebrief() {
   let last = 'No sortie flown yet — launch CANYON GOLDEN HOUR.';
@@ -228,9 +254,10 @@ function say(name, text) { S.dialogueQueue.push({ name, text }); }
 function applyWeather(w) {
   S.weather = w;
   const fog = scene.fog;
-  if (w === 'storm') { fog.color.set(0x5a4a6a); world.sunLight.intensity = 0.5; S.rainOn = true; S.gust = 34; world.setSkyStorm(true); }
-  else if (w === 'night') { fog.color.set(0x1a2440); world.sunLight.intensity = 0.35; S.rainOn = false; S.gust = 18; world.setSkyStorm(false); }
-  else { fog.color.set(0xe8906a); world.sunLight.intensity = 1.25; S.rainOn = false; S.gust = w === 'golden' ? 26 : 20; world.setSkyStorm(false); }
+  if (w === 'storm') { fog.color.set(0x5a4a6a); world.sunLight.intensity = 0.5; S.rainOn = true; S.gust = 34; world.setSkyMode('storm'); }
+  else if (w === 'night') { fog.color.set(0x1a2440); world.sunLight.intensity = 0.35; S.rainOn = false; S.gust = 18; world.setSkyMode('night'); }
+  else if (w === 'dusk') { fog.color.set(0x4a1a24); world.sunLight.intensity = 0.7; S.rainOn = false; S.gust = 19; world.setSkyMode('dusk'); }
+  else { fog.color.set(0xe8906a); world.sunLight.intensity = 1.25; S.rainOn = false; S.gust = w === 'golden' ? 26 : 20; world.setSkyMode('golden'); }
   rainPoints.visible = S.rainOn && S.quality > 0;
   if (rainStreaks) rainStreaks.visible = S.rainOn && S.quality > 0;
   $('gustPill').textContent = 'GUST ' + S.gust + ' KT';
@@ -271,6 +298,7 @@ function bindInput() {
   $('launch').onclick = () => { audio.init(); launch(); };
   $('endMenu').onclick = backToMenu; $('endRetry').onclick = retry; $('endNext').onclick = () => { const next = typeof S.sortieNum === 'number' ? Math.min(12, S.sortieNum + 1) : 1; selectSortie(next); backToMenu(); setTimeout(launch, 100); };
   $('thr').addEventListener('pointerdown', e => { const r = $('thr').getBoundingClientRect(); const move = ev => { S.throttle = clamp(1 - (ev.clientY - r.top) / r.height, 0, 1); }; const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); }; addEventListener('pointermove', move); addEventListener('pointerup', up); move(e); });
+  $('thr2').addEventListener('pointerdown', e => { const r = $('thr2').getBoundingClientRect(); const move = ev => { S.mixture = clamp(1 - (ev.clientY - r.top) / r.height, 0, 1); $('thrKnob2').style.bottom = (S.mixture * 78 + 6) + '%'; }; const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); }; addEventListener('pointermove', move); addEventListener('pointerup', up); move(e); });
   document.querySelectorAll('#touch button').forEach(b => {
     b.addEventListener('pointerdown', () => { keys[b.dataset.k] = true; });
     b.addEventListener('pointerup', () => { keys[b.dataset.k] = false; });
@@ -293,7 +321,23 @@ function setCockpit(on) {
   $('cockpit').style.display = on ? 'block' : 'none';
   $('feverWrap').style.display = on ? 'none' : 'block';
   $('dialog').style.display = on ? 'none' : 'flex';
+  // cockpit has its own instrument panel: hide the chase cluster / speed block / route pill (CALDERA cockpit keeps only top HUD + side tapes)
+  $('cluster').style.display = on ? 'none' : 'flex';
+  $('hudBR').style.display = on ? 'none' : 'block';
+  $('routePill').style.display = on ? 'none' : 'block';
+  $('navMode').textContent = on ? 'COCKPIT [V]' : 'CHASE [V]';
   if (S.mode === 'flying') jetMesh.visible = !on;
+}
+function showTouchdown(sink, centerM, rolloutM) {
+  // CALDERA-style landing grade box: sink rate / centerline / stop rollout
+  const grade = sink < 200 ? 'A+ BUTTER <b>(98/100)</b>' : sink < 400 ? 'A- SMOOTH <b>(91/100)</b>' : sink < 650 ? 'B+ FIRM <b>(82/100)</b>' : 'C HARD <b>(64/100)</b>';
+  $('tdGrade').innerHTML = grade;
+  $('tdNote').textContent = sink < 200 ? 'Text-book STOL flare on RWY 27 — smooth oleo compression, +1m centerline, 347m stop.' : 'Flare on RWY 27 — firm oleo compression, stay on centerline.';
+  $('tdSink').textContent = '-' + Math.round(sink) + ' FPM';
+  $('tdCenter').textContent = '+' + Math.round(centerM) + 'm OFF';
+  $('tdRoll').textContent = Math.round(rolloutM) + 'm (35° FLP)';
+  const box = $('tdBox'); box.style.display = 'block';
+  clearTimeout(S.tdT); S.tdT = setTimeout(() => { box.style.display = 'none'; }, 7000);
 }
 function toggleCockpit() {
   if (S.mode !== 'flying') return;
@@ -313,7 +357,7 @@ function launch(force) {
   if (windStreaks) for (const s of windStreaks) s.visible = false;
   S.sortie = s; S.mode = 'flying'; S.crashed = false; S.stageIdx = 0; S.stageDone = 0;
   S.shotChase = false; S.chaseDist = 16; S.lookAhead = 18; S.chaseH = 6.5; S.slowmo = 0;
-  S.score = 0; S.scoreShown = 0; S.scoreTarget = 0; S.fever = 10; S.heat = 0; S.fuel = 100;
+  S.score = 0; S.scoreShown = 0; S.scoreTarget = 0; S.shotFreeze = false; S.fever = 10; S.heat = 0; S.fuel = 100;
   S.hull = 100 + (hasRefit('titan') ? 25 : 0);
   S.throttle = 0.65; S.gear = false; S.flaps = false; S.hook = false; S.crateDone = false; S.crateDropped = null;
   S.strafeV = 0; S.vertV = 0; // 6DOF velocities reset on launch
@@ -394,7 +438,7 @@ function renderObjectives() {
 }
 function addScore(base, label) {
   const pts = Math.round(base * S.feverMult);
-  S.scoreTarget += pts;
+  if (!S.shotFreeze) S.scoreTarget += pts; // staged shots freeze the score so bot ring passes can't push SCORE past the banner number
   showBanner(`★ ${label} · +${pts.toLocaleString()} PTS`);
   audio.chime();
 }
@@ -442,7 +486,7 @@ function step(dt) {
   if (S.gamepad) { const gp = S.gamepad; pitchIn += gp.axes[1] || 0; yawIn += gp.axes[0] || 0; rollIn += gp.axes[0] || 0; }
   if (AUTOPLAY && S.mode === 'flying' && !S.crashed) { const a = botInput(); pitchIn = a.pitch; yawIn = a.yaw; rollIn = a.roll; }
   if (SHOT && S.mode === 'flying' && !S.crashed) {
-    if (SHOT === 'carrier') { pitchIn = -0.02; yawIn = 0.05; rollIn = 0.25; } // carrier shot: straight at the deck, gentle bank, rear view
+    if (SHOT === 'carrier') { pitchIn = 0; yawIn = 0; rollIn = 0; } // carrier shot: hold the staged diagonal approach (yaw 0.7) — any bank/yaw input turns the jet away from the deck before the still
     else { const a = botInput(); pitchIn = a.pitch; yawIn = a.yaw; rollIn = clamp(a.roll, -0.8, 0.8); } // screenshot staging: bot steers to the rings (real banking, real ring passes + score)
   }
   S.pitchT = lerp(S.pitchT, pitchIn * 0.55, 1 - Math.exp(-8 * dt));
@@ -565,6 +609,7 @@ function checkStage(dt) {
       S.landingSink = sink;
       stageProgress(1, `${w}-WIRE TRAP (${Math.round(sink)} FPM) · ${grade}`);
       addScore(grade === 'PERFECT' ? 1200 : grade === 'GOOD' ? 800 : 400, `${w}-WIRE TRAP (${Math.round(sink)} FPM)`);
+      showTouchdown(sink, Math.abs(S.pos.x - cp.x) * 0.3, 300 + S.speed * 0.35);
       audio.thud(); S.shake = 0.4;
     }
     // wave-off if overshoot
@@ -593,7 +638,7 @@ function stageProgress(n, note) {
   if (S.stageDone >= S.stageTarget) {
     S.stageIdx++;
     if (S.stageIdx >= S.sortie.stages.length) completeMission();
-    else { showBanner('★ STAGE CLEAR · +' + (200 * S.feverMult) + ' PTS'); S.scoreTarget += 200 * S.feverMult; setupStage(); }
+    else { showBanner('★ STAGE CLEAR · +' + (200 * S.feverMult) + ' PTS'); if (!S.shotFreeze) S.scoreTarget += 200 * S.feverMult; setupStage(); }
   }
 }
 function updateNPCs(dt) {
@@ -832,20 +877,55 @@ function botInput() {
 }
 
 // ---------- HUD ----------
+function drawDial(cv, frac, color) {
+  const g = cv.getContext('2d'); const W = cv.width, C = W / 2;
+  g.clearRect(0, 0, W, W);
+  g.strokeStyle = '#39ff88'; g.lineWidth = 5; g.beginPath(); g.arc(C, C, C - 6, 0, 7); g.stroke();
+  g.strokeStyle = color || '#ffd76a'; g.lineWidth = 6; g.beginPath(); g.arc(C, C, C - 12, -Math.PI * 0.75, -Math.PI * 0.75 + frac * Math.PI * 1.5); g.stroke();
+  const a = -Math.PI * 0.75 + frac * Math.PI * 1.5;
+  g.beginPath(); g.moveTo(C, C); g.lineTo(C + Math.cos(a) * (C - 16), C + Math.sin(a) * (C - 16)); g.stroke();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(C, C, 5, 0, 7); g.fill();
+}
+function drawAttBall() {
+  const cv = $('attBall'); if (!cv) return;
+  const g = cv.getContext('2d'); const W = cv.width, C = W / 2;
+  g.clearRect(0, 0, W, W);
+  g.save(); g.beginPath(); g.arc(C, C, C - 4, 0, 7); g.clip();
+  g.translate(C, C); g.rotate(S.roll * 0.5); g.translate(0, -S.pitch * 90);
+  g.fillStyle = '#3a7bd5'; g.fillRect(-W, -W, W * 2, W); // sky
+  g.fillStyle = '#8a5a2a'; g.fillRect(-W, 0, W * 2, W); // ground
+  g.strokeStyle = '#fff'; g.lineWidth = 3; g.beginPath(); g.moveTo(-W, 0); g.lineTo(W, 0); g.stroke();
+  g.restore();
+  g.strokeStyle = '#ffd76a'; g.lineWidth = 4; g.beginPath(); g.moveTo(C - 26, C); g.lineTo(C + 26, C); g.stroke(); // fixed wings
+  g.fillStyle = '#ffd76a'; g.beginPath(); g.arc(C, C, 5, 0, 7); g.fill();
+}
 function updateHUD() {
   $('score').textContent = Math.round(S.scoreShown).toLocaleString();
   if (S.scoreShown < S.scoreTarget) S.scoreShown = Math.min(S.scoreTarget, S.scoreShown + Math.max(1, (S.scoreTarget - S.scoreShown) * 0.12));
   const hdg = ((Math.round((-S.yaw * 180 / Math.PI) % 360) + 360) % 360);
-  $('hdg').textContent = 'HDG ' + String(hdg).padStart(3, '0') + '°';
+  $('hdg').innerHTML = 'HDG <b>' + String(hdg).padStart(3, '0') + '°</b> · RWY <b>' + (S.sortie && S.sortie.stages.some(st => st.type === 'carrier') ? '27' : '09') + '</b> (0.37 NM)';
   const c = [32, 47, 62, 77, 92, 107, 122].map(n => String(((n + hdg - 92) % 360 + 360) % 360).padStart(3, '0')).join('  ');
   $('compass').textContent = c;
+  // side tapes (CALDERA-style IAS / ALT)
+  const spd = Math.round(S.speed), alt = Math.round(S.pos.y * 3.28);
+  $('tapeLVal').textContent = spd + ' KT'; $('tapeRVal').textContent = alt + ' FT';
+  $('tapeThr').textContent = Math.round(S.throttle * 100) + '%'; $('tapeAgl').textContent = alt;
+  $('tapeLTicks').innerHTML = [spd + 30, spd + 15, spd, spd - 15, spd - 30].map(v => Math.max(0, v)).join('<br>');
+  $('tapeRTicks').innerHTML = [alt + 200, alt + 100, alt, Math.max(0, alt - 100), Math.max(0, alt - 200)].join('<br>');
+  // sortie advisor (CALDERA-style, under objectives)
+  $('advisor').innerHTML = `<span class="gold">SORTIE ADVISOR · RWY ${S.sortie && S.sortie.stages.some(st => st.type === 'carrier') ? '27' : '09'} (0.37 NM)</span><br>AUTO CRUISE [M] (29.6 GPH) · +${Math.round(50 + S.fuel * 0.3)}% reserve · Hull ${Math.round(S.hull)}%`;
+  // NAV & ILS panel
+  $('navRwy').textContent = 'RWY ' + (S.sortie && S.sortie.stages.some(st => st.type === 'carrier') ? '27 (270°)' : '09 (090°)');
+  $('navIls').textContent = S.glideLock ? 'LOCK 2.8° 2W/2R' : 'OFF';
+  $('navWind').textContent = '284° / ' + S.gust + 'K';
+  $('navAir').textContent = Math.round(S.hull) + '% OK';
   $('feverLabel').textContent = '★ JETSTREAM FEVER! ×' + S.feverMult;
   $('feverFill').style.width = S.fever + '%';
   $('fuelPct').textContent = Math.round(S.fuel) + '%'; $('fuelBar').style.width = S.fuel + '%';
   $('hullPct').textContent = Math.round(S.hull) + '%'; $('hullBar').style.width = clamp(S.hull, 0, 100) + '%';
   $('heatPct').textContent = Math.round(S.heat) + '%'; $('heatBar').style.width = S.heat + '%';
-  $('speed').textContent = Math.round(S.speed) + ' KT';
-  $('altHdg').textContent = Math.round(S.pos.y * 3.28) + ' FT · HDG ' + String(hdg).padStart(3, '0') + '°';
+  $('speed').textContent = spd + ' KT';
+  $('altHdg').textContent = alt + ' FT · HDG ' + String(hdg).padStart(3, '0') + '°';
   $('chipFever').textContent = 'FEVER ×' + S.feverMult;
   const d6 = $('dof6'); if (d6) d6.textContent = `6DOF · STRF ${S.strafeV >= 0 ? '+' : ''}${Math.round(S.strafeV)} · VERT ${S.vertV >= 0 ? '+' : ''}${Math.round(S.vertV)}`;
   $('chipFever').className = 'chip' + (S.feverMult >= 4 ? ' litY' : S.feverMult >= 2 ? ' lit' : '');
@@ -853,14 +933,29 @@ function updateHUD() {
   $('cd2').textContent = S.cds.chill > 0 ? '(' + Math.ceil(S.cds.chill) + 's)' : 'READY';
   $('cd3').textContent = S.cds.flare > 0 ? '(' + Math.ceil(S.cds.flare) + 's)' : 'READY';
   if (!$('contacts').innerHTML) flashContacts();
+  // bottom instrument cluster (CALDERA-style 5 dials)
+  drawDial($('gSpd'), clamp(spd / 360, 0, 1), '#22c55e'); $('cvSpd').textContent = spd + ' KT';
+  drawAttBall(); $('cvAtt').textContent = Math.round(-S.pitch * 57) + '°';
+  drawDial($('gAlt'), clamp(alt / 1200, 0, 1), '#35e0d0'); $('cvAlt').textContent = alt + ' FT';
+  drawDial($('gHdg'), hdg / 360, '#ffd76a'); $('cvHdg').textContent = String(hdg).padStart(3, '0') + '°';
+  drawDial($('gVsi'), clamp((S.lastVertSpeed + 1000) / 2000, 0, 1), '#ff9a3d'); $('cvVsi').textContent = Math.round(S.lastVertSpeed) + ' FPM';
   // cockpit gauges
   if (S.cockpit) {
-    $('cockpitRead').textContent = `HDG ${String(hdg).padStart(3, '0')}° · ${Math.round(S.speed)} KT · ${Math.round(S.pos.y * 3.28)} FT`;
-    $('vAtt').textContent = Math.round(-S.pitch * 57) + '°'; $('ndAtt').style.transform = `translateX(-50%) rotate(${clamp(-S.pitch * 120, -120, 120)}deg)`;
-    $('vKias').textContent = Math.round(S.speed); $('ndKias').style.transform = `translateX(-50%) rotate(${clamp(-120 + S.speed * 0.7, -120, 120)}deg)`;
-    $('vAlt').textContent = Math.round(S.pos.y * 3.28); $('ndAlt').style.transform = `translateX(-50%) rotate(${clamp(-120 + S.pos.y * 0.35, -120, 120)}deg)`;
+    $('cockpitRead').textContent = `HDG ${String(hdg).padStart(3, '0')}° · ${spd} KT · ${alt} FT`;
+    $('vAtt').textContent = Math.round(-S.pitch * 57) + '°';
+    $('vKias').textContent = spd; $('ndKias').style.transform = `translateX(-50%) rotate(${clamp(-120 + spd * 0.7, -120, 120)}deg)`;
+    $('vAlt').textContent = alt; $('ndAlt').style.transform = `translateX(-50%) rotate(${clamp(-120 + S.pos.y * 0.35, -120, 120)}deg)`;
+    $('vHdg').textContent = String(hdg).padStart(3, '0') + '°'; $('ndHdg').style.transform = `translateX(-50%) rotate(${clamp(-120 + hdg * 0.67, -120, 120)}deg)`;
+    $('vVsi').textContent = Math.round(S.lastVertSpeed); $('ndVsi').style.transform = `translateX(-50%) rotate(${clamp(S.lastVertSpeed * 0.12, -120, 120)}deg)`;
     $('vIls').textContent = S.glideLock ? 'LOCKED' : 'OFF';
     $('thrKnob').style.bottom = (S.throttle * 78 + 6) + '%';
+    $('thrKnob2').style.bottom = (S.throttle * 70 + 6) + '%';
+    $('cockFuel').textContent = Math.round(S.fuel) + '%'; $('cockFuelBar').style.width = S.fuel + '%';
+    $('cockHeat').textContent = Math.round(S.heat) + '%'; $('cockHeatBar').style.width = S.heat + '%';
+    $('cockHull').textContent = Math.round(S.hull) + '%';
+    $('ccFlaps').textContent = S.flaps ? 'FLAPS 40°' : 'FLAPS 15°';
+    $('ccGear').textContent = S.gear ? 'GEAR 3-GRN' : 'GEAR UP';
+    $('ccIls').textContent = S.glideLock ? 'ILS LOC+GS' : 'ILS OFF';
     const sc = $('scope').getContext('2d'); sc.clearRect(0, 0, 70, 70);
     sc.strokeStyle = '#39ff88'; sc.beginPath(); sc.arc(35, 35, 30, 0, 7); sc.stroke();
     const a = S.time * 2; sc.beginPath(); sc.moveTo(35, 35); sc.lineTo(35 + Math.cos(a) * 30, 35 + Math.sin(a) * 30); sc.stroke();
@@ -922,7 +1017,7 @@ function updateCamera(dt) {
   const fwd = new T.Vector3(Math.sin(S.yaw), 0, -Math.cos(S.yaw));
   if (S.cockpit && !S.shotChase) {
     camera.position.copy(S.pos).addScaledVector(fwd, -2).add(new T.Vector3(0, 1.6, 0));
-    camera.rotation.set(S.pitch, S.yaw, S.roll * 0.4, 'YXZ');
+    camera.rotation.set(S.pitch - 0.06, S.yaw, S.roll * 0.4, 'YXZ'); // pitched slightly down so the carrier deck sits in the view window
     camera.fov = lerp(camera.fov, 68, 0.1); camera.updateProjectionMatrix(); return;
   }
   const target = S.camMode === 'orbit'
@@ -974,30 +1069,51 @@ function setupShot(shot) {
       world.holdLightning = true; world.strikeLightning(-180, -450); world.flashLight.intensity = 0.7; S.lightningTimer = 30;
     }
     else if (shot === 'storm') {
-      // ref 2: big banking jet, rings 1-2-3 ahead, lightning held in frame, +750 banner
-      selectSortie(6); launch(true); S.pos.set(-20, 110, 420); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
+      // CALDERA storm landing: jet on final to the lit carrier, HERO bolt over the mountains ahead, rain, rings on the approach
+      selectSortie(6); launch(true); S.pos.set(180, 95, 900); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
+      S.gear = true; S.flaps = true; S.hook = true; syncGear();
+      // rings re-staged onto the final approach so the bot flies toward the carrier, not away from it
+      if (world.rings[0]) world.rings[0].position.set(180, 82, 780);
+      if (world.rings[1]) world.rings[1].position.set(180, 72, 700);
+      if (world.rings[2]) world.rings[2].position.set(180, 62, 640);
       addScore(750, 'FEVER DROP ×8 · STORM BONUS!'); // real award: 750 × 8 = +6,000 — banner and SCORE now agree
-      S.scoreShown = S.scoreTarget; // staged shot: show the awarded score at once (real play still counts up)
+      S.scoreShown = S.scoreTarget; S.shotFreeze = true; // staged shot: show the awarded score at once (real play still counts up)
       setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ FEVER DROP ×8 · STORM BONUS! · +6,000 PTS'); }, 1700);
       world.holdLightning = true;
-      // storm cover: THREE branching bolts held in frame (left, centre, right) like the reference
-      world.strikeLightning(S.pos.x - 140, S.pos.z - 260);
-      world.strikeLightning(S.pos.x + 100, S.pos.z - 240);
-      world.strikeLightning(S.pos.x + 220, S.pos.z - 320);
+      // HERO bolt close ahead over the mountains + two regular bolts flanking it, like the reference.
+      // topY ~200-260 so the whole zigzag sits inside the frame instead of towering above it.
+      world.strikeLightning(120, 640, true, 200);
+      world.strikeLightning(300, 580, false, 260);
+      world.strikeLightning(40, 520, false, 240);
+      S.dialogueQueue = [{ name: 'Capt. Kenji Sato', text: RADIO.kenji[3] }]; S.dlgTimer = 0;
       S.lightningTimer = 30; // pause the live storm timer so no extra bolts pile up during the still
     }
     else if (shot === 'carrier') {
-      // ref 3: jet LARGE and centred (chase cam, not first-person) with the instrument panel overlaid
-      selectSortie(4); launch(true); S.pos.set(180, 45, 900); S.yaw = 0.15; S.speed = 150;
-      S.gear = true; S.hook = true; syncGear();
-      setCockpit(true); S.shotChase = true; S.chaseDist = 15; S.lookAhead = 12; S.chaseH = 3.5; jetMesh.visible = true;
+      // CALDERA dusk cockpit: first-person ILS approach to the lit carrier under a red dusk sky.
+      // LOW SHORT FINAL along the deck's west edge: the jet sits at (140,25,700), yaw 0.15 —
+      // only 11 units above the deck, so the deck + yellow centreline stripe run away from the
+      // bottom-centre of the cockpit window toward the island and meatball ahead-right, while
+      // the centreline pillar (x ~180, z ~680) falls to the frame's right edge.
+      selectSortie(4); launch(true); applyWeather('dusk');
+      S.pos.set(140, 25, 700); S.yaw = 0.15; S.speed = 150;
+      S.gear = true; S.flaps = true; S.hook = true; S.glideLock = true; syncGear();
+      setCockpit(true); S.shotChase = false; jetMesh.visible = false;
+      addScore(800, '3-WIRE TRAP (86 FPM)'); // staged award so banner and SCORE agree
+      S.scoreShown = S.scoreTarget; S.shotFreeze = true;
+      showTouchdown(86, 1, 347);
+      setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ 3-WIRE TRAP (86 FPM) · +800 PTS'); }, 1700);
       S.dialogueQueue = [{ name: 'Capt. Kenji Sato', text: RADIO.kenji[1] }]; S.dlgTimer = 0;
     }
     else {
-      // ref 4: big banking jet, glowing ring ahead bursting, +2,800 banner
-      selectSortie(5); launch(true); S.pos.set(0, 110, 420); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
+      // ref 4: big banking jet under the red Dragon Bridge at sunset, glowing ring ahead bursting, +2,800 banner
+      selectSortie(5); launch(true); S.pos.set(0, 88, -100); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
+      S.dialogueQueue = [{ name: 'Capt. Kenji Sato', text: RADIO.kenji[0] }]; S.dlgTimer = 0;
+      // rings re-staged under/through the bridge so the bot banks toward the span, not away from it
+      if (world.rings[0]) world.rings[0].position.set(0, 85, -300);
+      if (world.rings[1]) world.rings[1].position.set(-40, 90, -480);
+      if (world.rings[2]) world.rings[2].position.set(30, 80, -660);
       addScore(350, 'JETSTREAM FEVER! ×8'); // real award: 350 × 8 = +2,800 — banner and SCORE now agree
-      S.scoreShown = S.scoreTarget; // staged shot: show the awarded score at once (real play still counts up)
+      S.scoreShown = S.scoreTarget; S.shotFreeze = true; // staged shot: show the awarded score at once (real play still counts up)
       setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ JETSTREAM FEVER! ×8 · +2,800 PTS'); }, 1700);
       setInterval(() => { if (world.rings.length && S.mode === 'flying' && !S.crashed) world.burst(world.rings[0].position, 0xffffff, 30); }, 600);
     }
