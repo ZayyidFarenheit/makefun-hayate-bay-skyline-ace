@@ -98,7 +98,7 @@ button{font-family:inherit;cursor:pointer}
 #radar{width:120px;height:120px;border-radius:50%;border:2px solid var(--line);background:radial-gradient(circle,#0a3d33 0%,#062a24 70%);display:block}
 .bar{height:8px;background:#123;border-radius:4px;overflow:hidden;margin:3px 0 6px}
 .bar>i{display:block;height:100%}
-#hudBR{position:absolute;right:10px;bottom:10px;width:300px;text-align:right}
+#hudBR{text-align:right}
 #speed{font-size:34px;font-weight:800;color:#fff;line-height:1}
 #eq{display:flex;gap:2px;justify-content:flex-end;align-items:flex-end;height:14px;margin-top:4px}
 #eq i{width:4px;background:var(--green);animation:eq 0.7s infinite alternate}
@@ -120,8 +120,15 @@ button{font-family:inherit;cursor:pointer}
 #tdBox .tdcell{flex:1;border:1px solid rgba(45,212,168,.4);border-radius:8px;padding:5px 6px;background:rgba(0,0,0,.3)}
 #tdBox .tdcell .k{font-size:9px;color:var(--mint);letter-spacing:.08em}
 #tdBox .tdcell .v{font-size:13px;font-weight:800;color:#fff}
+/* full-width bottom instrument bar (CALDERA reference: ATC + 5 dials + fuel + controls in ONE bar) */
+#bottombar{position:absolute;left:8px;right:8px;bottom:8px;display:flex;align-items:stretch;z-index:9;background:linear-gradient(180deg,#0d2b26,#071a17);border:1px solid #1f6f5a;border-radius:12px;padding:6px 10px}
+#bottombar #dialog{position:static;flex:0 0 300px;background:none;border:0;border-right:1px solid rgba(45,212,168,.25);border-radius:0;padding:4px 12px 4px 0}
+#bottombar #cluster{position:static;left:auto;bottom:auto;transform:none;flex:1 1 auto;width:auto;background:none;border:0;border-radius:0;padding:0 12px;display:flex;gap:10px;align-items:center;justify-content:center}
+#bottombar #hudBR{position:static;flex:0 0 290px;background:none;border:0;border-left:1px solid rgba(45,212,168,.25);border-radius:0;padding:4px 0 4px 12px}
+#bottombar #speed{font-size:28px}
+#bottombar #eq{display:none}
+#bottombar .fmline{display:none}
 /* bottom instrument cluster (CALDERA-style) */
-#cluster{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(660px,94vw);background:linear-gradient(180deg,#0d2b26,#071a17);border:1px solid #1f6f5a;border-bottom:0;border-radius:12px 12px 0 0;padding:6px 10px 8px;display:flex;gap:10px;align-items:center;justify-content:center;z-index:9}
 #cluster .cg{text-align:center;color:var(--mint);font-size:9px;letter-spacing:.08em}
 #cluster .cg canvas{width:56px;height:56px;display:block;margin:0 auto 1px}
 #cluster .cg .cv{color:#fff;font-size:12px;font-weight:800}
@@ -132,7 +139,7 @@ button{font-family:inherit;cursor:pointer}
 #portrait{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd76a,#c96a1e 60%,#5a2c05);display:flex;align-items:center;justify-content:center;font-weight:800;color:#201600;font-size:18px;flex:none;border:2px solid var(--gold)}
 #dlgName{color:var(--gold);font-weight:800;font-size:12px;letter-spacing:.08em}
 #dlgText{font-size:13px;line-height:1.35}
-#routePill{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);background:var(--teal);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:11px;color:var(--mint);white-space:nowrap}
+#routePill{position:absolute;left:50%;bottom:132px;transform:translateX(-50%);background:var(--teal);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:11px;color:var(--mint);white-space:nowrap}
 #banner{position:absolute;left:50%;top:32%;transform:translate(-50%,-50%) scale(.8);z-index:15;text-align:center;color:var(--gold);font-size:26px;font-weight:800;letter-spacing:.06em;text-shadow:0 2px 12px #000,0 0 30px rgba(255,215,106,.5);opacity:0;border-top:2px solid var(--gold);border-bottom:2px solid var(--gold);padding:8px 26px;background:rgba(5,38,34,.55);border-radius:4px;pointer-events:none}
 #banner.show{opacity:1}
 #warn{position:absolute;left:50%;top:58%;transform:translateX(-50%);color:var(--red);font-weight:800;font-size:18px;letter-spacing:.1em;text-shadow:0 1px 6px #000;display:none}
@@ -173,12 +180,14 @@ button{font-family:inherit;cursor:pointer}
  #hudTL,#hudTR{width:200px;font-size:11px}
  #hudTC{width:min(340px,42vw)} #compass{font-size:10px;letter-spacing:.12em}
  #hudBL{width:170px} #radar{width:90px;height:90px}
- #hudBR{width:220px} #speed{font-size:26px}
+ #speed{font-size:26px}
  #menuPanel h1{font-size:22px}
- #dialog{left:auto;right:10px;transform:none;width:min(320px,44vw);bottom:210px}
+ #bottombar{left:4px;right:4px;bottom:4px;flex-wrap:wrap}
+ #bottombar #dialog{flex:1 1 45%;border-right:0}
+ #bottombar #hudBR{flex:1 1 45%;border-left:0}
+ #bottombar #cluster{flex:1 1 100%;order:3;border-top:1px solid rgba(45,212,168,.25);padding-top:6px}
  .tape{display:none}
  #cluster .cg.vsi{display:none}
- #cluster{width:96vw}
  #tdBox{width:200px}
  #gaugeGrid{grid-template-columns:repeat(3,64px)}
  .gauge{width:64px} .gauge .dial{width:56px;height:56px}
@@ -227,6 +236,8 @@ button{font-family:inherit;cursor:pointer}
   <div class="tape" id="tapeL">IAS<span class="tval" id="tapeLVal">144 KT</span><span id="tapeLTicks">170<br>160<br>150<br>140<br>130</span><div class="small" style="margin-top:3px">THR <span id="tapeThr">72%</span></div></div>
   <div class="tape" id="tapeR">ALT<span class="tval" id="tapeRVal">161 FT</span><span id="tapeRTicks">400<br>300<br>200<br>100<br>0</span><div class="small" style="margin-top:3px">AGL <span id="tapeAgl">161</span></div></div>
   <div class="panel" id="tdBox"><div class="gold small">TOUCHDOWN</div><div class="grade" id="tdGrade">A+ BUTTER <b>(98/100)</b></div><div class="small" id="tdNote">Text-book STOL flare on RWY 27 — smooth oleo compression, +1m centerline, 347m stop.</div><div class="tdgrid"><div class="tdcell"><div class="k">SINK RATE</div><div class="v" id="tdSink">-112 FPM</div></div><div class="tdcell"><div class="k">CENTERLINE</div><div class="v" id="tdCenter">+1m OFF</div></div><div class="tdcell"><div class="k">STOP ROLLOUT</div><div class="v" id="tdRoll">347m (35° FLP)</div></div></div></div>
+  <div id="bottombar">
+  <div id="dialog"><div id="portrait">K</div><div><div id="dlgHead">TOWER · KAZE ATC (118.75 MHz)</div><div id="dlgName">CAPT. KENJI SATO · BAY FLIGHT DIRECTOR</div><div id="dlgText">Canyon Golden Hour… look at that light. Fly it like you mean it.</div></div></div>
   <div id="cluster">
     <div class="cg"><canvas id="gSpd" width="112" height="112"></canvas>SPD<div class="cv" id="cvSpd">245 KT</div></div>
     <div class="cg"><canvas id="gAtt" width="112" height="112"></canvas>ATT<div class="cv" id="cvAtt">0°</div></div>
@@ -235,8 +246,8 @@ button{font-family:inherit;cursor:pointer}
     <div class="cg vsi"><canvas id="gVsi" width="112" height="112"></canvas>VSI<div class="cv" id="cvVsi">0 FPM</div></div>
     <div class="cfuel"><div>K-21 SHINKAI · FUEL</div><div class="bar"><i id="fuelBar" style="width:100%;background:#22c55e"></i></div><div>FUEL <span id="fuelPct">100%</span> · HULL <span id="hullPct">100%</span></div><div class="bar"><i id="hullBar" style="width:100%;background:#35e0d0"></i></div><div>HEAT <span id="heatPct">0%</span> · GEAR:3G · FLP:15°</div><div class="bar"><i id="heatBar" style="width:0%;background:#ff9a3d"></i></div></div>
   </div>
-  <div class="panel" id="hudBR"><div class="gold small" id="jetName">K-21 SHINKAI</div><div id="speed">245 KT</div><div class="small" id="altHdg">426 FT · HDG 092°</div><div><span class="chip" id="chipGear">GEAR</span><span class="chip" id="chipFlaps">FLAPS</span><span class="chip" id="chipFever">FEVER ×1</span></div><div class="small mint" id="dof6" style="margin-top:6px">6DOF · STRF +0 · VERT +0</div><div class="small mint" style="margin-top:6px">♫ Kaze FM 101.5 — “Emerald Jetstream” — Future Synth</div><div id="eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div id="ctrlList">W/S Throttle · J/L Strafe · I/K Vert<br>F / G Flaps / Gear · 1/2/3 Radio<br>Space Drop / Brakes · V / X Tab Cam</div></div>
-  <div id="dialog"><div id="portrait">K</div><div><div id="dlgHead">TOWER · KAZE ATC (118.75 MHz)</div><div id="dlgName">CAPT. KENJI SATO · BAY FLIGHT DIRECTOR</div><div id="dlgText">Canyon Golden Hour… look at that light. Fly it like you mean it.</div></div></div>
+  <div class="panel" id="hudBR"><div class="gold small" id="jetName">K-21 SHINKAI</div><div id="speed">245 KT</div><div class="small" id="altHdg">426 FT · HDG 092°</div><div><span class="chip" id="chipGear">GEAR</span><span class="chip" id="chipFlaps">FLAPS</span><span class="chip" id="chipFever">FEVER ×1</span></div><div class="small mint" id="dof6" style="margin-top:6px">6DOF · STRF +0 · VERT +0</div><div class="small mint fmline" style="margin-top:6px">♫ Kaze FM 101.5 — “Emerald Jetstream” — Future Synth</div><div id="eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div id="ctrlList">W/S Throttle · J/L Strafe · I/K Vert<br>F / G Flaps / Gear · 1/2/3 Radio<br>Space Drop / Brakes · V / X Tab Cam</div></div>
+  </div>
   <div id="routePill">ROUTE PLAN · 3 STOPS (1)→(2)→(3) · 1.0s</div>
   <div id="banner"></div><div id="warn"></div>
 </div>

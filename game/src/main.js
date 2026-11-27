@@ -120,8 +120,8 @@ function buildParticles() {
 }
 function buildRain() {
   rainGeo = new T.BufferGeometry();
-  const arr = new Float32Array(700 * 3);
-  for (let i = 0; i < 700; i++) { arr[i * 3] = (Math.random() - 0.5) * 600; arr[i * 3 + 1] = Math.random() * 300; arr[i * 3 + 2] = (Math.random() - 0.5) * 600; }
+  const arr = new Float32Array(1500 * 3);
+  for (let i = 0; i < 1500; i++) { arr[i * 3] = (Math.random() - 0.5) * 600; arr[i * 3 + 1] = Math.random() * 300; arr[i * 3 + 2] = (Math.random() - 0.5) * 600; }
   rainGeo.setAttribute('position', new T.BufferAttribute(arr, 3));
   // rain as short vertical streaks (a bare PointsMaterial renders hard squares)
   const c = document.createElement('canvas'); c.width = 8; c.height = 32;
@@ -133,14 +133,14 @@ function buildRain() {
   rainPoints.visible = false; rainPoints.frustumCulled = false; scene.add(rainPoints);
   // second rain layer: long slanted streaks (line segments read as rain in a still; points alone do not)
   rainStreakGeo = new T.BufferGeometry();
-  const sa = new Float32Array(500 * 6);
-  for (let i = 0; i < 500; i++) {
+  const sa = new Float32Array(1200 * 6);
+  for (let i = 0; i < 1200; i++) {
     const x = (Math.random() - 0.5) * 600, y = Math.random() * 300, z = (Math.random() - 0.5) * 600;
     sa[i * 6] = x; sa[i * 6 + 1] = y; sa[i * 6 + 2] = z;
-    sa[i * 6 + 3] = x - 4; sa[i * 6 + 4] = y - 24; sa[i * 6 + 5] = z;
+    sa[i * 6 + 3] = x - 4; sa[i * 6 + 4] = y - 36; sa[i * 6 + 5] = z;
   }
   rainStreakGeo.setAttribute('position', new T.BufferAttribute(sa, 3));
-  rainStreaks = new T.LineSegments(rainStreakGeo, new T.LineBasicMaterial({ color: 0xbcd8ff, transparent: true, opacity: 0.45 }));
+  rainStreaks = new T.LineSegments(rainStreakGeo, new T.LineBasicMaterial({ color: 0xbcd8ff, transparent: true, opacity: 0.6 }));
   rainStreaks.visible = false; rainStreaks.frustumCulled = false; scene.add(rainStreaks);
 }
 function buildSmoke() {
@@ -320,6 +320,7 @@ function setCockpit(on) {
   S.cockpit = on;
   $('cockpit').style.display = on ? 'block' : 'none';
   $('feverWrap').style.display = on ? 'none' : 'block';
+  $('bottombar').style.display = on ? 'none' : 'flex';
   $('dialog').style.display = on ? 'none' : 'flex';
   // cockpit has its own instrument panel: hide the chase cluster / speed block / route pill (CALDERA cockpit keeps only top HUD + side tapes)
   $('cluster').style.display = on ? 'none' : 'flex';
@@ -439,6 +440,7 @@ function renderObjectives() {
 function addScore(base, label) {
   const pts = Math.round(base * S.feverMult);
   if (!S.shotFreeze) S.scoreTarget += pts; // staged shots freeze the score so bot ring passes can't push SCORE past the banner number
+  if (S.shotFreeze) return; // staged shots: the shot's own banner interval owns the banner — bot ring passes must not overwrite it with RING PASS
   showBanner(`★ ${label} · +${pts.toLocaleString()} PTS`);
   audio.chime();
 }
@@ -847,11 +849,11 @@ function updateParticles(dt) {
   smokeGeo.attributes.position.needsUpdate = true;
   if (S.rainOn && rainPoints.visible) {
     const ra = rainGeo.attributes.position.array;
-    for (let i = 0; i < 700; i++) { ra[i * 3 + 1] -= 260 * dt; ra[i * 3] -= 40 * dt; if (ra[i * 3 + 1] < 0) ra[i * 3 + 1] = 280; ra[i * 3] = S.pos.x + ((ra[i * 3] - S.pos.x + 300) % 600) - 300; ra[i * 3 + 2] = S.pos.z + ((ra[i * 3 + 2] - S.pos.z + 300) % 600) - 300; }
+    for (let i = 0; i < 1500; i++) { ra[i * 3 + 1] -= 260 * dt; ra[i * 3] -= 40 * dt; if (ra[i * 3 + 1] < 0) ra[i * 3 + 1] = 280; ra[i * 3] = S.pos.x + ((ra[i * 3] - S.pos.x + 300) % 600) - 300; ra[i * 3 + 2] = S.pos.z + ((ra[i * 3 + 2] - S.pos.z + 300) % 600) - 300; }
     rainGeo.attributes.position.needsUpdate = true;
     if (rainStreaks && rainStreaks.visible) { // streak layer falls with the same wrap
       const rs = rainStreakGeo.attributes.position.array;
-      for (let i = 0; i < 500; i++) {
+      for (let i = 0; i < 1200; i++) {
         rs[i * 6 + 1] -= 260 * dt; rs[i * 6 + 4] -= 260 * dt; rs[i * 6] -= 40 * dt; rs[i * 6 + 3] -= 40 * dt;
         if (rs[i * 6 + 1] < 0) { rs[i * 6 + 1] = 280; rs[i * 6 + 4] = 256; }
         rs[i * 6] = S.pos.x + ((rs[i * 6] - S.pos.x + 300) % 600) - 300; rs[i * 6 + 3] = rs[i * 6] - 4;
@@ -1069,22 +1071,31 @@ function setupShot(shot) {
       world.holdLightning = true; world.strikeLightning(-180, -450); world.flashLight.intensity = 0.7; S.lightningTimer = 30;
     }
     else if (shot === 'storm') {
-      // CALDERA storm landing: jet on final to the lit carrier, HERO bolt over the mountains ahead, rain, rings on the approach
-      selectSortie(6); launch(true); S.pos.set(180, 95, 900); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
+      // CALDERA storm landing, v2 (reference: plane LOW on final over a lit runway, ONE HUGE
+      // WHITE-HOT bolt centre-frame over snowy mountains): jet low at y 70 on the glide path,
+      // rings lowered onto the final, hero bolt dead-centre on the approach line, tall enough
+      // (topY 300) to span the frame from the top edge down to the runway.
+      selectSortie(6); launch(true); S.pos.set(180, 70, 860); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
       S.gear = true; S.flaps = true; S.hook = true; syncGear();
-      // rings re-staged onto the final approach so the bot flies toward the carrier, not away from it
-      if (world.rings[0]) world.rings[0].position.set(180, 82, 780);
-      if (world.rings[1]) world.rings[1].position.set(180, 72, 700);
-      if (world.rings[2]) world.rings[2].position.set(180, 62, 640);
+      // storm cover: clear the approach — the rings sit between the camera and the hero bolt and the bot
+      // flies into them, so they end up huge in the centre of the frame and hide the bolt. With the rings
+      // gone and the stage set to the carrier landing, the bot flies straight down the approach line
+      // toward the carrier — the bolt has a clear line of sight and the jet stays low on final.
+      for (const r of [...world.rings]) scene.remove(r);
+      world.rings.length = 0;
+      S.stageIdx = 2; S.stageDone = 0; $('hudStage').textContent = 'STAGE 3/3'; renderObjectives(); // panel now shows STAGE 3/3 + the carrier-landing objective
       addScore(750, 'FEVER DROP ×8 · STORM BONUS!'); // real award: 750 × 8 = +6,000 — banner and SCORE now agree
       S.scoreShown = S.scoreTarget; S.shotFreeze = true; // staged shot: show the awarded score at once (real play still counts up)
       setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ FEVER DROP ×8 · STORM BONUS! · +6,000 PTS'); }, 1700);
       world.holdLightning = true;
-      // HERO bolt close ahead over the mountains + two regular bolts flanking it, like the reference.
-      // topY ~200-260 so the whole zigzag sits inside the frame instead of towering above it.
-      world.strikeLightning(120, 640, true, 200);
-      world.strikeLightning(300, 580, false, 260);
-      world.strikeLightning(40, 520, false, 240);
+      // HERO bolt dead-centre on the approach line over the mountains + two smaller white companions off-axis.
+      // Hero sits at z 560 — in FRONT of the nearest karst pillar row (z 500), which occluded it at z 450 —
+      // and SHORT (topY 160) so the whole bolt fits inside the chase camera's frame (its top was above the
+      // frame at topY 300). Chase camera pulled in (12 vs 16) so the jet reads bigger on final.
+      S.chaseDist = 12;
+      world.strikeLightning(180, 560, true, 160);
+      world.strikeLightning(60, 560, false, 200);
+      world.strikeLightning(330, 560, false, 180);
       S.dialogueQueue = [{ name: 'Capt. Kenji Sato', text: RADIO.kenji[3] }]; S.dlgTimer = 0;
       S.lightningTimer = 30; // pause the live storm timer so no extra bolts pile up during the still
     }

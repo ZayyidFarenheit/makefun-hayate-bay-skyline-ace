@@ -49,7 +49,7 @@ export function numberTexture(n) {
 export class World {
   constructor(scene) {
     this.scene = scene; this.pillars = []; this.particles = [];
-    this.buildSky(); this.buildSea(); this.buildCanyon(); this.buildBridge(); this.buildCarrier(); this.buildCity(); this.buildClouds(); this.buildBirds(); this.buildGodRays(); this.buildMountains(); this.buildApproachLights();
+    this.buildSky(); this.buildSea(); this.buildCanyon(); this.buildBridge(); this.buildCarrier(); this.buildCity(); this.buildClouds(); this.buildBirds(); this.buildGodRays(); this.buildMountains(); this.buildHaze(); this.buildApproachLights();
     this.flashLight = new T.PointLight(0xccccff, 0, 900); scene.add(this.flashLight); this.lightning = null; this.bolts = []; this.holdLightning = false;
     this.rings = []; this.crates = []; this.npcs = [];
   }
@@ -91,6 +91,7 @@ export class World {
     const stripe = stripeTexture(), fol = foliageTexture();
     const geo = new T.CylinderGeometry(1, 1.35, 1, 7);
     const mat = new T.MeshLambertMaterial({ map: stripe, flatShading: true });
+    this.canyonMat = mat; // storm tints these dark so the tan canyon reads as dark storm cliffs (collision stays on)
     const count = 64;
     const inst = new T.InstancedMesh(geo, mat, count);
     const m = new T.Matrix4(), q = new T.Quaternion(), sc = new T.Vector3(), pos = new T.Vector3();
@@ -109,6 +110,7 @@ export class World {
     inst.count = i; this.scene.add(inst); this.pillars = spots;
     const capGeo = new T.IcosahedronGeometry(1, 0);
     const capMat = new T.MeshLambertMaterial({ map: fol, flatShading: true });
+    this.canyonCapMat = capMat;
     const caps = new T.InstancedMesh(capGeo, capMat, i * 2);
     let ci = 0;
     for (const p of spots) for (let k = 0; k < 2; k++) {
@@ -147,7 +149,7 @@ export class World {
   buildCarrier() {
     const g = new T.Group();
     const hull = new T.Mesh(new T.BoxGeometry(46, 14, 260), new T.MeshLambertMaterial({ color: 0x3a4a52, flatShading: true })); hull.position.y = 4; g.add(hull);
-    const deck = new T.Mesh(new T.BoxGeometry(56, 3, 260), new T.MeshLambertMaterial({ color: 0x5a6a72 })); deck.position.y = 12; g.add(deck);
+    const deck = new T.Mesh(new T.BoxGeometry(56, 3, 260), new T.MeshLambertMaterial({ color: 0x7d8b94 })); deck.position.y = 12; g.add(deck);
     const island = new T.Mesh(new T.BoxGeometry(10, 22, 34), new T.MeshLambertMaterial({ color: 0x6a7a82 })); island.position.set(20, 24, 40); g.add(island);
     const stripe = new T.Mesh(new T.BoxGeometry(2, 0.4, 240), new T.MeshBasicMaterial({ color: 0xffd76a })); stripe.position.set(-12, 13.8, 0); g.add(stripe);
     this.wires = [];
@@ -178,7 +180,7 @@ export class World {
     // distant snow-capped ranges on the far horizon (reference: storm landing over mountains, dusk cockpit ridge line)
     const g = new T.Group();
     const rock = new T.MeshLambertMaterial({ color: 0x2a3a55, flatShading: true });
-    const snow = new T.MeshLambertMaterial({ color: 0xc9d2de, flatShading: true });
+    const snow = new T.MeshLambertMaterial({ color: 0x9aa8bc, flatShading: true });
     const spots = [
       [-950, -1650, 620, 300], [-500, -1750, 760, 340], [0, -1850, 820, 380], [520, -1720, 700, 330], [980, -1600, 560, 280],
       [-1200, -900, 480, 240], [1150, -700, 520, 260], [-1050, 300, 420, 220], [1100, 100, 460, 230], [650, -1100, 380, 200],
@@ -189,6 +191,30 @@ export class World {
       const cap = new T.Mesh(new T.ConeGeometry(r * 0.42, h * 0.32, 7), snow); cap.position.set(x, h - 6 - h * 0.16, z); cap.rotation.y = m.rotation.y; g.add(cap);
     }
     this.scene.add(g); this.mountains = g;
+    // CLOSE storm-approach wall: big snow-capped peaks directly behind the carrier runway,
+    // filling the background of the storm-landing shot (reference: huge snowy mountains
+    // lit by the lightning flash). Bright snow caps so the flash light makes them glow.
+    const wall = new T.Group();
+    const wallSnow = new T.MeshLambertMaterial({ color: 0x7a8aa2, flatShading: true });
+    const wallSpots = [
+      [-40, 260, 380, 240], [180, 220, 420, 260], [420, 280, 360, 230],
+      [-260, 330, 300, 200], [640, 320, 320, 210], [60, 120, 300, 190], [320, 90, 340, 200],
+    ];
+    for (const [x, z, h, r] of wallSpots) {
+      const m = new T.Mesh(new T.ConeGeometry(r, h, 7), rock); m.position.set(x, h / 2 - 6, z); m.rotation.y = Math.random() * 3; wall.add(m);
+      const cap = new T.Mesh(new T.ConeGeometry(r * 0.5, h * 0.4, 7), wallSnow); cap.position.set(x, h - 6 - h * 0.2, z); cap.rotation.y = m.rotation.y; wall.add(cap);
+    }
+    this.scene.add(wall); this.mountainWall = wall;
+  }
+  buildHaze() {
+    // soft fog/haze layers across the approach corridor for depth (storm only)
+    const tex = glowTexture('rgba(200,215,240,.8)', 'rgba(160,180,220,.35)');
+    this.haze = new T.Group();
+    for (const [x, y, z, w, h] of [[-80, 120, 420, 700, 160], [260, 170, 320, 800, 200], [80, 90, 240, 600, 130], [-200, 200, 300, 700, 170], [420, 140, 380, 650, 150]]) {
+      const s = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, opacity: 0.09, depthWrite: false }));
+      s.scale.set(w, h, 1); s.position.set(x, y, z); this.haze.add(s);
+    }
+    this.haze.visible = false; this.scene.add(this.haze);
   }
   buildApproachLights() {
     // lit runway: approach-light centreline streaming toward the carrier deck + green deck-edge lights + floodlight glows
@@ -197,12 +223,20 @@ export class World {
     const white = new T.MeshBasicMaterial({ color: 0xffffff });
     const amber = new T.MeshBasicMaterial({ color: 0xffb020 });
     const green = new T.MeshBasicMaterial({ color: 0x33ff88 });
-    for (let z = 660; z <= 940; z += 28) { // centreline approach lights, carrier -> incoming jet
-      const s = new T.Mesh(new T.SphereGeometry(1.6, 6, 6), z % 56 < 28 ? white : amber);
-      s.position.set(cp.x, 3, z); g.add(s);
+    for (let z = 660; z <= 940; z += 28) { // centreline approach lights, carrier -> incoming jet (raised above the water so they read)
+      const s = new T.Mesh(new T.SphereGeometry(2.6, 6, 6), z % 56 < 28 ? white : amber);
+      s.position.set(cp.x, 6, z); g.add(s);
+      const gl = new T.Sprite(new T.SpriteMaterial({ map: glowTexture('rgba(255,255,255,1)', 'rgba(255,220,140,.5)'), transparent: true, depthWrite: false, opacity: 0.5 }));
+      gl.scale.set(26, 26, 1); gl.position.set(cp.x, 6, z); g.add(gl);
+    }
+    for (let z = 752; z <= 752; z += 1) { // threshold light bar across the deck entrance
+      for (let dx = -24; dx <= 24; dx += 8) { const s = new T.Mesh(new T.BoxGeometry(2.4, 2.4, 2.4), green); s.position.set(cp.x + dx, 15, z); g.add(s); }
     }
     for (let z = 500; z <= 740; z += 24) { // deck edge lights, both sides
       for (const dx of [-26, 26]) { const s = new T.Mesh(new T.BoxGeometry(1.6, 1.6, 1.6), green); s.position.set(cp.x + dx, 14.5, z); g.add(s); }
+    }
+    for (let z = 500; z <= 740; z += 30) { // lit centreline dashes ON the deck so it reads as a runway strip
+      const s = new T.Mesh(new T.BoxGeometry(3, 0.8, 10), white); s.position.set(cp.x, 14.6, z); g.add(s);
     }
     for (const dx of [-22, 22]) { // floodlight glow sprites over the deck
       const gl = new T.Sprite(new T.SpriteMaterial({ map: glowTexture('rgba(255,240,200,1)', 'rgba(255,180,80,.5)'), transparent: true, depthWrite: false, opacity: 0.55 }));
@@ -279,7 +313,7 @@ export class World {
     if (!this.skyMat) return;
     const presets = {
       golden: { top: 0x2a4d7a, mid: 0xff9a4d, bot: 0xffc98a, sun: 0xffc27a, sunI: 1.25, cloud: 0xffffff, rays: false },
-      storm: { top: 0x3a2a5e, mid: 0xb06a9e, bot: 0xff8a6a, sun: 0xffc27a, sunI: 0.5, cloud: 0x8a6fc0, rays: true },
+      storm: { top: 0x0e1428, mid: 0x24304e, bot: 0x3a3648, sun: 0xcfe0ff, sunI: 0.4, cloud: 0x5a6a8c, rays: false },
       night: { top: 0x060a18, mid: 0x1a2440, bot: 0x2a3455, sun: 0x9ab0ff, sunI: 0.35, cloud: 0x4a5570, rays: false },
       dusk: { top: 0x1a0a2e, mid: 0xd43d2a, bot: 0xff7a3d, sun: 0xff5a3d, sunI: 0.7, cloud: 0xc06a7a, rays: false },
     };
@@ -289,15 +323,22 @@ export class World {
     this.skyMat.uniforms.bot.value.set(p.bot);
     if (this.sunLight) { this.sunLight.color.set(p.sun); }
     if (this.godRays) this.godRays.visible = p.rays;
+    if (this.haze) this.haze.visible = (mode === 'storm');
+    // storm: tint the tan karst canyon dark so it reads as black storm cliffs flanking the runway
+    // (collision stays on — the pillars are still there, just silhouetted); other skies restore it
+    if (this.canyonMat) this.canyonMat.color.set(mode === 'storm' ? 0x4a4a5e : 0xffffff);
+    if (this.canyonCapMat) this.canyonCapMat.color.set(mode === 'storm' ? 0x3a4038 : 0xffffff);
     for (const c of (this.clouds || [])) c.material.color.set(p.cloud);
   }
-  // Branching lightning: a THICK 3D bolt (tube, not a 1px line) with a purple halo tube,
-  // 2 branch bolts, and a big glow sprite — readable in a still, not a faint hairline.
+  // Branching lightning: a THICK 3D bolt (tube, not a 1px line) with a halo tube,
+  // branch bolts, and a big glow sprite — readable in a still, not a faint hairline.
   // Bolts live in this.bolts[] so several can be held at once (storm cover); each bolt
   // removes itself after 180ms unless holdLightning is set (menu/storm staging).
-  // hero=true: a much bigger bolt (core r 7, halo r 15, 800x1100 glow, flash 8) — the
-  // huge branching white bolt over the mountains in the CALDERA storm-landing reference.
-  // topY: bolts for stills start low (topY ~200) so the whole zigzag sits inside the frame
+  // hero=true: ONE HUGE WHITE-HOT bolt dominating the frame (core r 10, halo r 22,
+  // white-blue halo + white glow, flash 12) — the huge branching white bolt over the
+  // mountains in the CALDERA storm-landing reference. No more purple tubes: the hero
+  // and its companions are all white-hot now.
+  // topY: bolts for stills start low (topY ~300) so the whole zigzag sits inside the frame
   // instead of towering above it — the live storm still uses the default 520.
   strikeLightning(cx, cz, hero, topY) {
     const group = new T.Group();
@@ -305,27 +346,29 @@ export class World {
     const baseZ = (cz !== undefined ? cz : -600) + (Math.random() - 0.5) * (hero ? 20 : 80);
     const top = topY !== undefined ? topY : 520;
     const pts = []; let x = baseX, y = top, z = baseZ;
-    const segs = hero ? 10 : 8, drop = top / segs, jit = hero ? 110 : 90;
-    for (let i = 0; i < segs; i++) { pts.push(new T.Vector3(x, y, z)); x += (Math.random() - 0.5) * jit; y -= drop; z += (Math.random() - 0.5) * 60; }
+    const segs = hero ? 10 : 8, drop = top / segs, jit = hero ? 18 : 90; // hero bolt walks tight on the approach centreline
+    // (±9/step) so it reads as ONE dominant centre bolt; wide jitter made it snake out of frame
+    for (let i = 0; i < segs; i++) { pts.push(new T.Vector3(x, y, z)); x += (Math.random() - 0.5) * jit; y -= drop; z += (Math.random() - 0.5) * (hero ? 16 : 60); }
     const curve = new T.CatmullRomCurve3(pts);
     const coreMat = new T.MeshBasicMaterial({ color: 0xffffff });
-    const haloMat = new T.MeshBasicMaterial({ color: 0xb45cff, transparent: true, opacity: hero ? 0.7 : 0.55 });
-    const coreR = hero ? 7 : 2, haloR = hero ? 15 : 5;
-    group.add(new T.Mesh(new T.TubeGeometry(curve, 24, haloR, 5, false), haloMat)); // purple halo tube
+    const haloMat = new T.MeshBasicMaterial({ color: hero ? 0xeaf2ff : 0xbfd4ff, transparent: true, opacity: hero ? 0.6 : 0.5 });
+    const coreR = hero ? 18 : 2, haloR = hero ? 26 : 5; // hero core thick enough to dominate the frame even where the HUD crosses it
+    group.add(new T.Mesh(new T.TubeGeometry(curve, 24, haloR, 5, false), haloMat)); // pale halo tube
     group.add(new T.Mesh(new T.TubeGeometry(curve, 24, coreR, 5, false), coreMat)); // white-hot core tube
-    for (const bi of [2, 4]) { // 2 branch bolts off the upper/middle of the main bolt
+    for (const bi of (hero ? [1, 3, 5] : [2, 4])) { // branch bolts off the main bolt (hero gets 3, longer ones)
       const bp = pts[bi]; const bpts = [bp.clone()]; let bx = bp.x, by = bp.y, bz = bp.z;
       const dir = Math.random() < 0.5 ? -1 : 1;
       for (let i = 0; i < 4; i++) { bx += dir * (25 + Math.random() * 35); by -= 45; bz += (Math.random() - 0.5) * 40; bpts.push(new T.Vector3(bx, by, bz)); }
       const bc = new T.CatmullRomCurve3(bpts);
-      group.add(new T.Mesh(new T.TubeGeometry(bc, 10, hero ? 5 : 2.2, 5, false), haloMat));
-      group.add(new T.Mesh(new T.TubeGeometry(bc, 10, hero ? 2 : 0.9, 5, false), coreMat));
+      group.add(new T.Mesh(new T.TubeGeometry(bc, 10, hero ? 12 : 2.2, 5, false), haloMat));
+      group.add(new T.Mesh(new T.TubeGeometry(bc, 10, hero ? 5 : 0.9, 5, false), coreMat));
     }
-    const glow = new T.Sprite(new T.SpriteMaterial({ map: glowTexture('rgba(220,180,255,.9)', 'rgba(150,80,255,.45)'), transparent: true, depthWrite: false, opacity: 0.9 }));
-    glow.scale.set(hero ? 800 : 360, hero ? 1100 : 540, 1); glow.position.set(x, top / 2, z); group.add(glow);
+    const glow = new T.Sprite(new T.SpriteMaterial({ map: glowTexture(hero ? 'rgba(255,255,255,1)' : 'rgba(220,230,255,.9)', hero ? 'rgba(190,215,255,.55)' : 'rgba(150,180,255,.45)'), transparent: true, depthWrite: false, opacity: hero ? 0.45 : 0.5 }));
+    glow.scale.set(hero ? 260 : 120, hero ? 340 : 180, 1); glow.position.set(baseX, top / 2, baseZ); group.add(glow); // centred on the bolt axis, not the walk's random end point
     this.scene.add(group);
     this.bolts.push(group); this.lightning = group; // latest bolt, for callers that reference it
-    this.flashLight.position.set(baseX, 200, baseZ); this.flashLight.intensity = hero ? 8 : 3.5;
+    this.flashLight.color.set(hero ? 0xffffff : 0xccccff);
+    this.flashLight.position.set(baseX, 200, baseZ); this.flashLight.intensity = hero ? 5 : 3.5;
     setTimeout(() => {
       if (this.holdLightning) return;
       this.scene.remove(group);
