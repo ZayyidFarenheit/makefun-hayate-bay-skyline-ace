@@ -60,7 +60,7 @@ function init() {
   world = new World(scene);
   setLoad(45, 'Painting the sunset…');
   buildParticles(); buildRain(); buildTrail(); buildSmoke();
-  menuJet = world.buildJet(S.jetId); menuJet.position.set(6, 74, 320); menuJet.scale.set(3.1,3.1,3.1); scene.add(menuJet); decorateMenuJet();
+  menuJet = world.buildJet(S.jetId); menuJet.position.set(6, 74, 520); menuJet.scale.set(3.1,3.1,3.1); scene.add(menuJet); decorateMenuJet(); // menu staging sits at z 520, SOUTH of the close mountain wall (z 90-330) — the old z 320 put the jet inside the wall cones and the (180,220) peak's outer wall filled the frame and hid the jet's tail
   // warm fill light from the camera side so the menu jet's flank reads (sun is behind it)
   menuLight = new T.PointLight(0xffd9a0, 2.2, 260); menuLight.position.set(70, 120, 430); scene.add(menuLight);
   // hot orange rim light from behind-left so the jet's far edges glow against the sunset
@@ -242,7 +242,7 @@ function toggleRefit(r, btn) {
 }
 function selectJet(id) {
   S.jetId = id; save.jet = id; persist();
-  scene.remove(menuJet); menuJet = world.buildJet(id); menuJet.position.set(6, 74, 320); menuJet.scale.set(3.1,3.1,3.1); scene.add(menuJet); decorateMenuJet();
+  scene.remove(menuJet); menuJet = world.buildJet(id); menuJet.position.set(6, 74, 520); menuJet.scale.set(3.1,3.1,3.1); scene.add(menuJet); decorateMenuJet();
   scene.remove(jetMesh); jetMesh = world.buildJet(id); jetMesh.visible = false; jetMesh.scale.set(1.25, 1.25, 1.25); scene.add(jetMesh);
   $('jetName').textContent = JETS[id].short;
 }
@@ -489,7 +489,8 @@ function step(dt) {
   if (AUTOPLAY && S.mode === 'flying' && !S.crashed) { const a = botInput(); pitchIn = a.pitch; yawIn = a.yaw; rollIn = a.roll; }
   if (SHOT && S.mode === 'flying' && !S.crashed) {
     if (SHOT === 'carrier') { pitchIn = 0; yawIn = 0; rollIn = 0; } // carrier shot: hold the staged diagonal approach (yaw 0.7) — any bank/yaw input turns the jet away from the deck before the still
-    else { const a = botInput(); pitchIn = a.pitch; yawIn = a.yaw; rollIn = clamp(a.roll, -0.8, 0.8); } // screenshot staging: bot steers to the rings (real banking, real ring passes + score)
+    else if (SHOT === 'storm') { pitchIn = 0.1; yawIn = 0; rollIn = 0; } // storm cover: LEVEL final like ref 1 — wings level, straight down the runway centreline, gentle ~3° descent (pitch ≈ 0.055). No bot steering: the bot chased the carrier and pitched the jet nose-up 25° while diving, which is what made the cover jet look like it was climbing steeply.
+    else { const a = botInput(); pitchIn = a.pitch; yawIn = a.yaw; rollIn = clamp(a.roll, -0.35, 0.35); } // play shot: bot steers to the rings, but the bank is capped at ~20° — a gentle bank toward the bridge like ref 3, never the 50° diagonal of the old take
   }
   S.pitchT = lerp(S.pitchT, pitchIn * 0.55, 1 - Math.exp(-8 * dt));
   S.yawT = lerp(S.yawT, yawIn * jet.turn * turnBoost * 0.55, 1 - Math.exp(-8 * dt));
@@ -568,9 +569,14 @@ function step(dt) {
   }
   // particles update
   updateParticles(dt);
-  // jet mesh transform
+  // jet mesh transform — attitude sign: positive S.pitch is a nose-DOWN descent
+  // (flight path uses sin(-pitch); the HUD att ball agrees), and positive S.roll
+  // is a RIGHT bank (HUD att ball rotates clockwise). The mesh must match, so
+  // both signs are flipped here: before this fix the jet visibly pitched nose-UP
+  // while descending and banked the wrong way through every turn — the "weird
+  // diagonal pose" in the storm and bridge covers.
   jetMesh.position.copy(S.pos);
-  jetMesh.rotation.set(S.pitch, S.yaw, S.roll, 'YXZ');
+  jetMesh.rotation.set(-S.pitch, S.yaw, -S.roll, 'YXZ');
   jetMesh.rotation.order = 'YXZ';
   const flames = []; jetMesh.traverse(o => { if (o.name === 'flame') flames.push(o); });
   for (const f of flames) { f.visible = S.throttle > 0.25; const sc = afterburner ? 1.8 : 0.7 + S.throttle * 0.5; f.scale.set(sc, sc, sc); }
@@ -998,11 +1004,11 @@ function drawRadar() {
 // ---------- camera + loop ----------
 function updateCamera(dt) {
   if (S.mode === 'menu') {
-    // fixed hero angle: the jet never drifts into a rear view — 3/4 front, nose down-left, wings spread, big on the right
+    // fixed hero angle: the jet never drifts into a rear view — 3/4 front, nose toward camera-left, wings LEVEL, big on the right (ref 2: the plane is parked level on display, not diving diagonally — the old pitch -0.55 / roll 0.45 made it look nose-down)
     const r = 64 + S.orbitDrag;
-    camera.position.set(Math.sin(S.menuAngle) * r, 76 + Math.sin(S.time * 0.2) * 4, 320 + Math.cos(S.menuAngle) * r);
-    camera.lookAt(-14, 88, 320);
-    menuJet.rotation.set(-0.55, 2.05, 0.45 + Math.sin(S.time * 0.5) * 0.04, 'YXZ'); // nose down-left, tail up-right, diagonal like the reference
+    camera.position.set(Math.sin(S.menuAngle) * r, 76 + Math.sin(S.time * 0.2) * 4, 520 + Math.cos(S.menuAngle) * r);
+    camera.lookAt(-14, 88, 520);
+    menuJet.rotation.set(0, 2.05, 0, 'YXZ'); // level 3/4 front: pitch 0, roll 0, yaw 2.05 puts the nose toward camera-left with the wings horizontal
     menuJet.position.y = 74 + Math.sin(S.time * 0.8) * 3;
     // afterburner flicker
     if (menuJet.userData.abGlow) { const f = 1 + Math.sin(S.time * 13) * 0.12 + Math.sin(S.time * 29) * 0.06; menuJet.userData.abGlow.scale.set(17 * f, 17 * f, 1); }
@@ -1079,8 +1085,9 @@ function setupShot(shot) {
       S.gear = true; S.flaps = true; S.hook = true; syncGear();
       // storm cover: clear the approach — the rings sit between the camera and the hero bolt and the bot
       // flies into them, so they end up huge in the centre of the frame and hide the bolt. With the rings
-      // gone and the stage set to the carrier landing, the bot flies straight down the approach line
-      // toward the carrier — the bolt has a clear line of sight and the jet stays low on final.
+      // gone and the stage set to the carrier landing, the jet holds a LEVEL final (attitude hold in
+      // step(): pitch 0.1 / yaw 0 / roll 0) straight down the approach line toward the carrier — wings
+      // level, gentle descent, like ref 1 — and the bolt has a clear line of sight.
       for (const r of [...world.rings]) scene.remove(r);
       world.rings.length = 0;
       S.stageIdx = 2; S.stageDone = 0; $('hudStage').textContent = 'STAGE 3/3'; renderObjectives(); // panel now shows STAGE 3/3 + the carrier-landing objective
@@ -1092,7 +1099,7 @@ function setupShot(shot) {
       // Hero sits at z 560 — in FRONT of the nearest karst pillar row (z 500), which occluded it at z 450 —
       // and TALL (topY 300, 12 segments) so it spans from above the top edge of the frame down behind the jet,
       // like the CALDERA reference bolt. Chase camera pulled in (12 vs 16) so the jet reads bigger on final.
-      S.chaseDist = 12;
+      S.chaseDist = 17; // pulled back from 12: with the jet flying LEVEL the tail sat right against the bottom bar and cropped — 17 frames the whole jet with the lit runway ahead
       world.strikeLightning(180, 560, true, 300); // ONE hero bolt only — companions read as a second competing bolt and broke the reference's single-bolt look
       // Kill the strike's flash light: a HELD hero bolt leaves the white point light on forever, and it
       // bleaches the whole storm scene pale (bright turquoise sea, tan pillars, washed-out sky) — verified
@@ -1122,10 +1129,12 @@ function setupShot(shot) {
       // ref 4: big banking jet under the red Dragon Bridge at sunset, glowing ring ahead bursting, +2,800 banner
       selectSortie(5); launch(true); S.pos.set(0, 88, -100); S.yaw = 0; S.speed = 200; S.fever = 82; S.feverMult = 8;
       S.dialogueQueue = [{ name: 'Capt. Kenji Sato', text: RADIO.kenji[0] }]; S.dlgTimer = 0;
-      // rings re-staged under/through the bridge so the bot banks toward the span, not away from it
+      // rings re-staged nearly straight ahead under/through the bridge so the bot
+      // flies a gentle S toward the span with a small bank, not a hard zigzag —
+      // the old ±40 offsets made it bank ~50° and dive diagonally across the frame
       if (world.rings[0]) world.rings[0].position.set(0, 85, -300);
-      if (world.rings[1]) world.rings[1].position.set(-40, 90, -480);
-      if (world.rings[2]) world.rings[2].position.set(30, 80, -660);
+      if (world.rings[1]) world.rings[1].position.set(-18, 88, -480);
+      if (world.rings[2]) world.rings[2].position.set(12, 84, -660);
       addScore(350, 'JETSTREAM FEVER! ×8'); // real award: 350 × 8 = +2,800 — banner and SCORE now agree
       S.scoreShown = S.scoreTarget; S.shotFreeze = true; // staged shot: show the awarded score at once (real play still counts up)
       setInterval(() => { if (S.mode === 'flying' && !S.crashed) showBanner('★ JETSTREAM FEVER! ×8 · +2,800 PTS'); }, 1700);
